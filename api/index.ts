@@ -375,6 +375,29 @@ const localDb = {
   } as Record<string, any>
 };
 
+// ── Global Chat Store (in-memory, resets on cold start) ──────────────────────
+const globalChatMessages: Array<{
+  id: string;
+  userId: string;
+  username: string;
+  is_staff: boolean;
+  message: string;
+  timestamp: string;
+}> = [
+  { id: '1', userId: 'sys', username: 'System', is_staff: true, message: '🎉 Selamat datang di ReyaBet! Chat global aktif.', timestamp: new Date().toISOString() }
+];
+
+// ── Site Config Store (in-memory, admin editable) ────────────────────────────
+const siteConfig: Record<string, any> = {
+  siteName: 'ReyaBet',
+  siteSubtitle: 'Online gacha in ReyaPs',
+  footerText: 'WHEEL SPINNER CASINO © 2026 • Private Premium Client Build',
+  discordLink: 'https://discord.gg/dewagacor-staff',
+  depositText: 'Silakan hubungi staff admin untuk melakukan top-up deposit saldo agar bisa bermain.',
+  logoUrl: '/logo.png',
+  welcomeMessage: 'Selamat datang di ReyaBet! Mainkan game seru dan menangkan hadiah.',
+};
+
 export default async function handler(req: any, res: any) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -411,6 +434,16 @@ export default async function handler(req: any, res: any) {
     if (path.startsWith('/games/config/') && method === 'GET') {
       const gameType = path.split('/').pop();
       return await handleGetConfig(gameType, res);
+    }
+
+    // ── PUBLIC: Online users (no auth needed) ────────────────────────────────
+    if (path === '/users/online' && method === 'GET') {
+      return await handleOnlineUsers(res);
+    }
+
+    // ── PUBLIC: Global Chat (read no auth, post needs auth) ──────────────────
+    if (path === '/chat/messages' && method === 'GET') {
+      return res.json({ messages: globalChatMessages.slice(-50) });
     }
 
     // Protected routes (require auth)
@@ -492,11 +525,42 @@ export default async function handler(req: any, res: any) {
         const gameType = path.split('/')[3];
         return await handleResetConfig(gameType, res);
       }
+
+      // Site content config (admin only)
+      if (path === '/admin/site-config' && method === 'GET') {
+        return res.json({ config: siteConfig });
+      }
+
+      if (path === '/admin/site-config' && method === 'POST') {
+        const { config } = body;
+        if (config) {
+          Object.assign(siteConfig, config);
+          return res.json({ success: true, config: siteConfig });
+        }
+        return res.status(400).json({ error: 'Config data required' });
+      }
     }
 
-    // Online users
-    if (path === '/users/online' && method === 'GET') {
-      return await handleOnlineUsers(res);
+    // Chat post (requires auth)
+    if (path === '/chat/messages' && method === 'POST') {
+      const { message } = body;
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return res.status(400).json({ error: 'Pesan tidak boleh kosong!' });
+      }
+      if (message.trim().length > 200) {
+        return res.status(400).json({ error: 'Pesan maksimal 200 karakter!' });
+      }
+      const chatMsg = {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        username: user.username,
+        is_staff: user.is_staff,
+        message: message.trim(),
+        timestamp: new Date().toISOString()
+      };
+      globalChatMessages.push(chatMsg);
+      if (globalChatMessages.length > 100) globalChatMessages.shift();
+      return res.json({ success: true, message: chatMsg });
     }
 
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -1190,19 +1254,65 @@ async function handleResetConfig(gameType: string, res: any) {
 
 // ─── Online Users Handler ──────────────────────────────────────────────────────
 async function handleOnlineUsers(res: any) {
+  // Generate mock online players with realistic activities
+  const activities = [
+    'Membuka Golden Chest 🎁',
+    'Bertaruh di Crash Game 🚀',
+    'Memutar Roda Hadiah 🎡',
+    'Idle di Lobby 💬',
+    'Melihat Dashboard 📊',
+    'Membuka Legendary Chest 👑',
+    'Bermain Case Opening 🎰',
+    'Mengelola Jalannya Casino 🛠️'
+  ];
+
+  const mockPlayers = [
+    { id: 'v1', username: 'GrowDev_Id', balance: 452300, is_staff: false, activity: activities[0] },
+    { id: 'v2', username: 'WLSeller99', balance: 1250000, is_staff: false, activity: activities[1] },
+    { id: 'v3', username: 'nanddev', balance: 5000000, is_staff: true, activity: activities[7] },
+    { id: 'v4', username: 'ProBreakerGT', balance: 82500, is_staff: false, activity: activities[2] },
+    { id: 'v5', username: 'BGL_Digger', balance: 7520000, is_staff: false, activity: activities[3] },
+    { id: 'v6', username: 'VortexWL', balance: 35000, is_staff: false, activity: activities[4] },
+    { id: 'v7', username: 'LegendaryLox', balance: 24500000, is_staff: false, activity: activities[5] }
+  ];
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data: users, error } = await supabase
-        .from('users')
-        .select('username')
-        .limit(10);
+      // Try to get real online sessions from database
+      const { data: sessions, error } = await supabase
+        .from('online_sessions')
+        .select('user_id, username, role, activity, last_heartbeat')
+        .gte('last_heartbeat', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+        .order('last_heartbeat', { ascending: false })
+        .limit(20);
 
-      if (error) throw error;
-      return res.json({ online: users?.length || 0, users: users || [] });
+      if (!error && sessions && sessions.length > 0) {
+        // Get user details for each session
+        const userIds = sessions.map(s => s.user_id);
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, username, balance, is_staff')
+          .in('id', userIds);
+
+        if (users) {
+          const players = sessions.map(session => {
+            const user = users.find(u => u.id === session.user_id);
+            return {
+              id: session.user_id,
+              username: session.username,
+              balance: user?.balance || 0,
+              is_staff: user?.is_staff || false,
+              activity: session.activity || 'Online'
+            };
+          });
+          return res.json({ players, onlineCount: players.length });
+        }
+      }
     } catch (e: any) {
-      return res.json({ online: 0, users: [] });
+      console.error('[ONLINE] Database error:', e);
     }
-  } else {
-    return res.json({ online: localDb.users.length, users: localDb.users.map(u => ({ username: u.username })) });
   }
+
+  // Fallback to mock data
+  return res.json({ players: mockPlayers, onlineCount: mockPlayers.length });
 }

@@ -13,6 +13,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { API } from './utils/api';
 import CurrencyDisplay from './components/CurrencyDisplay';
 import { OnlinePlayers } from './components/OnlinePlayers';
+import { GlobalChat } from './components/GlobalChat';
 import {
   Volume2,
   VolumeX,
@@ -896,9 +897,10 @@ export default function App() {
         )}
           </div>
 
-          {/* RIGHT COLUMN: REALTIME ACTIVE ONLINE PLAYERS LIST */}
-          <div className="lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
+          {/* RIGHT COLUMN: REALTIME ACTIVE ONLINE PLAYERS LIST & GLOBAL CHAT */}
+          <div className="lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px] flex flex-col gap-6">
             <OnlinePlayers currentUser={user} />
+            <GlobalChat currentUser={user} />
           </div>
         </div>
       </main>

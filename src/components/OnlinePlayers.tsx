@@ -35,6 +35,7 @@ export function OnlinePlayers({ currentUser }: OnlinePlayersProps) {
         const data = await API.getOnlinePlayers();
         if (isMounted) {
           let serverPlayers = data.players || [];
+          const serverCount = data.onlineCount || serverPlayers.length;
           
           // Reconcile list state with currentUser to bypass any server save or update delays (race conditions)
           if (currentUser) {
@@ -65,7 +66,7 @@ export function OnlinePlayers({ currentUser }: OnlinePlayersProps) {
           }));
 
           setPlayers(serverPlayers);
-          setOnlineCount(serverPlayers.length);
+          setOnlineCount(serverCount);
           setLoading(false);
         }
       } catch (err) {
