@@ -65,7 +65,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             Reya Bet
           </h1>
           <p className="text-xs text-slate-400 font-mono tracking-widest mt-1 uppercase">
-            SECURE SUPABASE SYSTEM GATE
+           
           </p>
         </div>
 

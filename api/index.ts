@@ -1,62 +1,339 @@
 // Vercel Serverless Function Handler
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-// Load default configs from JSON files
-let caseOpeningDefault: any;
-let rodaDefault: any;
-let permainanDefault: any;
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPLETE HARDCODED DATA FOR VERCEL DEPLOYMENT (ALL 15 CHESTS)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-try {
-  // Try to load from files (for Vercel)
-  const apiDir = __dirname || process.cwd();
-  caseOpeningDefault = JSON.parse(readFileSync(join(apiDir, 'case_opening.json'), 'utf-8'));
-  rodaDefault = JSON.parse(readFileSync(join(apiDir, 'roda.json'), 'utf-8'));
-  permainanDefault = JSON.parse(readFileSync(join(apiDir, 'permainan.json'), 'utf-8'));
-} catch (e) {
-  // Fallback to minimal data if files not found
-  console.error('[CONFIG] Failed to load JSON files:', e);
-  caseOpeningDefault = {
-    chests: [
-      {
-        id: "fishing",
-        name: "Fishing Chest",
-        price: 50,
-        icon: "🎣",
-        color: "from-cyan-500 to-blue-600",
-        image: "/images/fishing_chest.png",
-        items: [
-          { name: "Wigly", rarity: "Common", chance: 60, value: 5, icon: "🥾", color: "#a1a1aa", image: "/images/wigly.png" },
-          { name: "Cotd", rarity: "Rare", chance: 25, value: 30, icon: "🐟", color: "#3b82f6", image: "/images/cotd.png" },
-          { name: "Golden Rod", rarity: "Epic", chance: 10, value: 2500, icon: "🧵", color: "#a855f7", image: "/images/goldenrod.png" },
-          { name: "Fishing Hat", rarity: "Legendary", chance: 4, value: 7000, icon: "🎣", color: "#eab308", image: "/images/hatfishing.png" }
-        ]
-      }
-    ],
-    gameSettings: {
-      defaultSpinDurationMs: 5500,
-      fastSpinDurationMs: 1500,
-      soundTickFrequencyHz: 220,
-      pointerShadowGlowHex: "#38bdf8",
-      spinEasing: "cubic-bezier(0.04, 0.84, 0.12, 1)"
+const caseOpeningDefault: any = {
+  "chests": [
+    {
+      "id": "fishing",
+      "name": "Fishing Chest",
+      "price": 50,
+      "icon": "🎣",
+      "color": "from-cyan-500 to-blue-600",
+      "background": "linear-gradient(135deg, #091728 0%, #0d273c 100%)",
+      "image": "/images/fishing_chest.png",
+      "items": [
+        { "name": "Wigly", "rarity": "Common", "chance": 60, "value": 5, "icon": "🥾", "color": "#a1a1aa", "image": "/images/wigly.png" },
+        { "name": "Cotd", "rarity": "Rare", "chance": 25, "value": 30, "icon": "🐟", "color": "#3b82f6", "image": "/images/cotd.png" },
+        { "name": "Golden Rod", "rarity": "Epic", "chance": 4, "value": 2500, "icon": "🧵", "color": "#a855f7", "image": "/images/goldenrod.png" },
+        { "name": "Fishing Hat", "rarity": "Legendary", "chance": 2, "value": 7000, "icon": "🎣", "color": "#eab308", "image": "/images/hatfishing.png" },
+        { "name": "Thanks Giving Rod", "rarity": "Mythic", "chance": 1, "value": 10000, "icon": "🔱", "color": "#ef4444", "image": "/images/tgrod.png" }
+      ]
+    },
+    {
+      "id": "farm",
+      "name": "Farm Chest",
+      "price": 80,
+      "icon": "🌾",
+      "color": "from-[#38bdf8] to-[#0369a1]",
+      "background": "linear-gradient(135deg, #04121d 0%, #0f2d45 100%)",
+      "image": "/images/farmchest.png",
+      "items": [
+        { "name": "Rusty Pitchfork", "rarity": "Common", "chance": 60, "value": 10, "icon": "🔱", "color": "#a1a1aa", "image": "https://picsum.photos/seed/rust_fork/150/150" },
+        { "name": "Oversized Pumpkin", "rarity": "Rare", "chance": 25, "value": 45, "icon": "🎃", "color": "#3b82f6", "image": "https://picsum.photos/seed/gargantuan_pumpkin/150/150" },
+        { "name": "Tractor Keys", "rarity": "Epic", "chance": 10, "value": 180, "icon": "🔑", "color": "#a855f7", "image": "https://picsum.photos/seed/tractor_key/150/150" },
+        { "name": "Golden Harvest Apple", "rarity": "Legendary", "chance": 4, "value": 650, "icon": "🍎", "color": "#eab308", "image": "https://picsum.photos/seed/gold_apple/150/150" },
+        { "name": "Abundance Demeter Scythe", "rarity": "Mythic", "chance": 1, "value": 3200, "icon": "⚔️", "color": "#ef4444", "image": "/images/prize_farm.png" }
+      ]
+    },
+    {
+      "id": "citem",
+      "name": "Citem Chest",
+      "price": 120,
+      "icon": "⚔️",
+      "color": "from-sky-400 to-indigo-600",
+      "background": "linear-gradient(135deg, #081123 0%, #0d2346 100%)",
+      "image": "/images/citemchest.png",
+      "items": [
+        { "name": "Iron Dagger", "rarity": "Common", "chance": 60, "value": 15, "icon": "🗡️", "color": "#a1a1aa", "image": "https://picsum.photos/seed/iron_blade/150/150" },
+        { "name": "Carbon Steel Katana", "rarity": "Rare", "chance": 25, "value": 70, "icon": "⚔️", "color": "#3b82f6", "image": "https://picsum.photos/seed/steel_katana/150/150" },
+        { "name": "Cyber Laser Carbine", "rarity": "Epic", "chance": 10, "value": 280, "icon": "🔫", "color": "#a855f7", "image": "https://picsum.photos/seed/laser_carb/150/150" },
+        { "name": "Plasma Radiant Sword", "rarity": "Legendary", "chance": 4, "value": 950, "icon": "⚡", "color": "#eab308", "image": "https://picsum.photos/seed/plasma_sword/150/150" },
+        { "name": "Asgardian Thunder Hammer", "rarity": "Mythic", "chance": 1, "value": 4800, "icon": "🔨", "color": "#ef4444", "image": "/images/prize_weapon.png" }
+      ]
+    },
+    {
+      "id": "magic",
+      "name": "Magic Chest",
+      "price": 150,
+      "icon": "🔮",
+      "color": "from-cyan-400 to-blue-600",
+      "background": "linear-gradient(135deg, #06111f 0%, #0b223d 100%)",
+      "image": "/images/magic_chest.png",
+      "items": [
+        { "name": "Initiate Crystal Wand", "rarity": "Common", "chance": 60, "value": 20, "icon": "🪄", "color": "#a1a1aa", "image": "https://picsum.photos/seed/crystal_wand/150/150" },
+        { "name": "Luminous Mana Elixir", "rarity": "Rare", "chance": 25, "value": 90, "icon": "🧪", "color": "#3b82f6", "image": "https://picsum.photos/seed/mana_pot/150/150" },
+        { "name": "Grimoire of Fireball", "rarity": "Epic", "chance": 10, "value": 350, "icon": "📖", "color": "#a855f7", "image": "https://picsum.photos/seed/grimoire_fire/150/150" },
+        { "name": "Robe of Archmage", "rarity": "Legendary", "chance": 4, "value": 1100, "icon": "🥋", "color": "#eab308", "image": "https://picsum.photos/seed/mage_robe/150/150" },
+        { "name": "Sorcerer Supreme Staff", "rarity": "Mythic", "chance": 1, "value": 5500, "icon": "🔮", "color": "#ef4444", "image": "/images/prize_magic.png" }
+      ]
+    },
+    {
+      "id": "animal",
+      "name": "Animal Chest",
+      "price": 60,
+      "icon": "🦊",
+      "color": "from-blue-400 to-sky-700",
+      "background": "linear-gradient(135deg, #051421 0%, #0b243b 100%)",
+      "image": "/images/animal_chest.png",
+      "items": [
+        { "name": "Farmyard Chick Egg", "rarity": "Common", "chance": 60, "value": 8, "icon": "🥚", "color": "#a1a1aa", "image": "https://picsum.photos/seed/chick_egg/150/150" },
+        { "name": "Fierce Timber Wolf Pup", "rarity": "Rare", "chance": 25, "value": 35, "icon": "🐺", "color": "#3b82f6", "image": "https://picsum.photos/seed/wolf_pup/150/150" },
+        { "name": "Crystalline Night Owl", "rarity": "Epic", "chance": 10, "value": 140, "icon": "🦉", "color": "#a855f7", "image": "https://picsum.photos/seed/night_owl/150/150" },
+        { "name": "Golden Griffin Mount", "rarity": "Legendary", "chance": 4, "value": 520, "icon": "🦁", "color": "#eab308", "image": "https://picsum.photos/seed/griffin_mount/150/150" },
+        { "name": "Eternity Phoenix Soul", "rarity": "Mythic", "chance": 1, "value": 2800, "icon": "🦅", "color": "#ef4444", "image": "/images/prize_animal.png" }
+      ]
+    },
+    {
+      "id": "treasure",
+      "name": "Treasure Chest",
+      "price": 200,
+      "icon": "👑",
+      "color": "from-cyan-500 to-sky-600",
+      "background": "linear-gradient(135deg, #041423 0%, #0c2a47 100%)",
+      "image": "/images/treasure_chest.png",
+      "items": [
+        { "name": "Verdigris Copper Coin", "rarity": "Common", "chance": 60, "value": 25, "icon": "🪙", "color": "#a1a1aa", "image": "https://picsum.photos/seed/copper_coin/150/150" },
+        { "name": "Heavy Silver Ingot", "rarity": "Rare", "chance": 25, "value": 120, "icon": "🥈", "color": "#3b82f6", "image": "https://picsum.photos/seed/silver_ingot/150/150" },
+        { "name": "Royal Ruby Crest", "rarity": "Epic", "chance": 10, "value": 480, "icon": "👑", "color": "#a855f7", "image": "https://picsum.photos/seed/ruby_crest/150/150" },
+        { "name": "Cursed Pirate King Crown", "rarity": "Legendary", "chance": 4, "value": 1600, "icon": "👑", "color": "#eab308", "image": "https://picsum.photos/seed/pirate_crown/150/150" },
+        { "name": "Sacred El Dorado Idol", "rarity": "Mythic", "chance": 1, "value": 8500, "icon": "🗿", "color": "#ef4444", "image": "/images/prize_treasure.png" }
+      ]
+    },
+    {
+      "id": "space",
+      "name": "Space Chest",
+      "price": 250,
+      "icon": "🚀",
+      "color": "from-sky-500 to-[#1d4ed8]",
+      "background": "linear-gradient(135deg, #030a1c 0%, #0a1f4a 100%)",
+      "image": "/images/space_chest.png",
+      "items": [
+        { "name": "Raw Meteorite Shard", "rarity": "Common", "chance": 60, "value": 30, "icon": "☄️", "color": "#a1a1aa", "image": "https://picsum.photos/seed/meteor_shard/150/150" },
+        { "name": "Zero-G Magneto Boots", "rarity": "Rare", "chance": 25, "value": 150, "icon": "🥾", "color": "#3b82f6", "image": "https://picsum.photos/seed/zero_boot/150/150" },
+        { "name": "High-Yield Ion Thruster", "rarity": "Epic", "chance": 10, "value": 600, "icon": "⚙️", "color": "#a855f7", "image": "https://picsum.photos/seed/ion_thruster/150/150" },
+        { "name": "Hyper-Gravity Gauntlets", "rarity": "Legendary", "chance": 4, "value": 2000, "icon": "🥊", "color": "#eab308", "image": "https://picsum.photos/seed/grav_gloves/150/150" },
+        { "name": "Cosmic Supernova Core", "rarity": "Mythic", "chance": 1, "value": 10000, "icon": "💥", "color": "#ef4444", "image": "/images/prize_space.png" }
+      ]
+    },
+    {
+      "id": "ocean",
+      "name": "Ocean Chest",
+      "price": 100,
+      "icon": "🌊",
+      "color": "from-sky-400 to-blue-600",
+      "background": "linear-gradient(135deg, #031424 0%, #0c2b47 100%)",
+      "image": "/images/ocean_chest.png",
+      "items": [
+        { "name": "Iridescent Sea Glass", "rarity": "Common", "chance": 60, "value": 12, "icon": "💎", "color": "#a1a1aa", "image": "https://picsum.photos/seed/sea_glass/150/150" },
+        { "name": "Deep Reef Coral Blade", "rarity": "Rare", "chance": 25, "value": 55, "icon": "🗡️", "color": "#3b82f6", "image": "https://picsum.photos/seed/coral_blade/150/150" },
+        { "name": "Black Conch Pearl Ring", "rarity": "Epic", "chance": 10, "value": 220, "icon": "💍", "color": "#a855f7", "image": "https://picsum.photos/seed/pearl_ring/150/150" },
+        { "name": "Sub ocean Neptune Trident", "rarity": "Legendary", "chance": 4, "value": 800, "icon": "🔱", "color": "#eab308", "image": "https://picsum.photos/seed/nep_trident/150/150" },
+        { "name": "Poseidon Sea-Core Shard", "rarity": "Mythic", "chance": 1, "value": 4000, "icon": "🌀", "color": "#ef4444", "image": "/images/prize_ocean.png" }
+      ]
+    },
+    {
+      "id": "dragon",
+      "name": "Dragon Chest",
+      "price": 300,
+      "icon": "🐉",
+      "color": "from-[#0284c7] via-[#0369a1] to-[#075985]",
+      "background": "linear-gradient(135deg, #02101e 0%, #0b2641 100%)",
+      "image": "/images/dragon_chest.png",
+      "items": [
+        { "name": "Hardened Dragon Scale Shield", "rarity": "Common", "chance": 60, "value": 35, "icon": "🛡️", "color": "#a1a1aa", "image": "https://picsum.photos/seed/dragon_shield/150/150" },
+        { "name": "Razor-Sharp Wyvern Wing", "rarity": "Rare", "chance": 25, "value": 180, "icon": "🪽", "color": "#3b82f6", "image": "https://picsum.photos/seed/dragon_wing/150/150" },
+        { "name": "Furnace Dragon Claw", "rarity": "Epic", "chance": 10, "value": 750, "icon": "🐾", "color": "#a855f7", "image": "https://picsum.photos/seed/dragon_claw/150/150" },
+        { "name": "Ancient Volcanic Wyrm Staff", "rarity": "Legendary", "chance": 4, "value": 2400, "icon": "🪄", "color": "#eab308", "image": "https://picsum.photos/seed/volcanic_staff/150/150" },
+        { "name": "Heart of the Dragon Lord", "rarity": "Mythic", "chance": 1, "value": 12500, "icon": "❤️", "color": "#ef4444", "image": "/images/prize_dragon.png" }
+      ]
+    },
+    {
+      "id": "tech",
+      "name": "Tech Chest",
+      "price": 180,
+      "icon": "💻",
+      "color": "from-cyan-400 to-blue-500",
+      "background": "linear-gradient(135deg, #0a1628 0%, #0f2744 100%)",
+      "image": "https://picsum.photos/seed/tech_chest/400/400",
+      "items": [
+        { "name": "Broken Circuit Board", "rarity": "Common", "chance": 60, "value": 18, "icon": "🔌", "color": "#a1a1aa", "image": "https://picsum.photos/seed/circuit_board/150/150" },
+        { "name": "Quantum Processor", "rarity": "Rare", "chance": 25, "value": 95, "icon": "🖥️", "color": "#3b82f6", "image": "https://picsum.photos/seed/quantum_cpu/150/150" },
+        { "name": "Holographic Display", "rarity": "Epic", "chance": 10, "value": 380, "icon": "📱", "color": "#a855f7", "image": "https://picsum.photos/seed/holo_display/150/150" },
+        { "name": "AI Neural Core", "rarity": "Legendary", "chance": 4, "value": 1300, "icon": "🤖", "color": "#eab308", "image": "https://picsum.photos/seed/ai_core/150/150" },
+        { "name": "Singularity Supercomputer", "rarity": "Mythic", "chance": 1, "value": 6800, "icon": "⚡", "color": "#ef4444", "image": "https://picsum.photos/seed/supercomputer/150/150" }
+      ]
+    },
+    {
+      "id": "candy",
+      "name": "Candy Chest",
+      "price": 70,
+      "icon": "🍬",
+      "color": "from-pink-400 to-rose-500",
+      "background": "linear-gradient(135deg, #2d0a1f 0%, #4a1230 100%)",
+      "image": "https://picsum.photos/seed/candy_chest/400/400",
+      "items": [
+        { "name": "Sour Gummy Worm", "rarity": "Common", "chance": 60, "value": 9, "icon": "🐛", "color": "#a1a1aa", "image": "https://picsum.photos/seed/gummy_worm/150/150" },
+        { "name": "Rainbow Lollipop", "rarity": "Rare", "chance": 25, "value": 42, "icon": "🍭", "color": "#3b82f6", "image": "https://picsum.photos/seed/lollipop/150/150" },
+        { "name": "Chocolate Diamond Bar", "rarity": "Epic", "chance": 10, "value": 165, "icon": "🍫", "color": "#a855f7", "image": "https://picsum.photos/seed/choco_bar/150/150" },
+        { "name": "Golden Candy Cane", "rarity": "Legendary", "chance": 4, "value": 580, "icon": "🍬", "color": "#eab308", "image": "https://picsum.photos/seed/candy_cane/150/150" },
+        { "name": "Eternal Sugar Crystal", "rarity": "Mythic", "chance": 1, "value": 3100, "icon": "💎", "color": "#ef4444", "image": "https://picsum.photos/seed/sugar_crystal/150/150" }
+      ]
+    },
+    {
+      "id": "sports",
+      "name": "Sports Chest",
+      "price": 110,
+      "icon": "⚽",
+      "color": "from-green-400 to-emerald-600",
+      "background": "linear-gradient(135deg, #0a1f0d 0%, #0f3318 100%)",
+      "image": "https://picsum.photos/seed/sports_chest/400/400",
+      "items": [
+        { "name": "Worn Baseball Glove", "rarity": "Common", "chance": 60, "value": 14, "icon": "🥎", "color": "#a1a1aa", "image": "https://picsum.photos/seed/baseball_glove/150/150" },
+        { "name": "Championship Trophy", "rarity": "Rare", "chance": 25, "value": 68, "icon": "🏆", "color": "#3b82f6", "image": "https://picsum.photos/seed/trophy/150/150" },
+        { "name": "Pro Athlete Jersey", "rarity": "Epic", "chance": 10, "value": 270, "icon": "👕", "color": "#a855f7", "image": "https://picsum.photos/seed/jersey/150/150" },
+        { "name": "Olympic Gold Medal", "rarity": "Legendary", "chance": 4, "value": 920, "icon": "🥇", "color": "#eab308", "image": "https://picsum.photos/seed/gold_medal/150/150" },
+        { "name": "Legendary World Cup", "rarity": "Mythic", "chance": 1, "value": 4600, "icon": "🏆", "color": "#ef4444", "image": "https://picsum.photos/seed/world_cup/150/150" }
+      ]
+    },
+    {
+      "id": "music",
+      "name": "Music Chest",
+      "price": 140,
+      "icon": "🎵",
+      "color": "from-purple-400 to-violet-600",
+      "background": "linear-gradient(135deg, #1a0a2e 0%, #2d1548 100%)",
+      "image": "https://picsum.photos/seed/music_chest/400/400",
+      "items": [
+        { "name": "Rusty Harmonica", "rarity": "Common", "chance": 60, "value": 16, "icon": "🎶", "color": "#a1a1aa", "image": "https://picsum.photos/seed/harmonica/150/150" },
+        { "name": "Electric Guitar Pick", "rarity": "Rare", "chance": 25, "value": 78, "icon": "🎸", "color": "#3b82f6", "image": "https://picsum.photos/seed/guitar_pick/150/150" },
+        { "name": "Platinum Record Disc", "rarity": "Epic", "chance": 10, "value": 310, "icon": "💿", "color": "#a855f7", "image": "https://picsum.photos/seed/platinum_disc/150/150" },
+        { "name": "Legendary Stradivarius", "rarity": "Legendary", "chance": 4, "value": 1050, "icon": "🎻", "color": "#eab308", "image": "https://picsum.photos/seed/stradivarius/150/150" },
+        { "name": "Divine Symphony Baton", "rarity": "Mythic", "chance": 1, "value": 5200, "icon": "🎼", "color": "#ef4444", "image": "https://picsum.photos/seed/symphony_baton/150/150" }
+      ]
+    },
+    {
+      "id": "ancient",
+      "name": "Ancient Chest",
+      "price": 220,
+      "icon": "🏛️",
+      "color": "from-amber-400 to-orange-600",
+      "background": "linear-gradient(135deg, #1f1408 0%, #3a2410 100%)",
+      "image": "https://picsum.photos/seed/ancient_chest/400/400",
+      "items": [
+        { "name": "Cracked Clay Pot", "rarity": "Common", "chance": 60, "value": 22, "icon": "🏺", "color": "#a1a1aa", "image": "https://picsum.photos/seed/clay_pot/150/150" },
+        { "name": "Roman Gladius Sword", "rarity": "Rare", "chance": 25, "value": 110, "icon": "⚔️", "color": "#3b82f6", "image": "https://picsum.photos/seed/gladius/150/150" },
+        { "name": "Egyptian Scarab Amulet", "rarity": "Epic", "chance": 10, "value": 440, "icon": "🪲", "color": "#a855f7", "image": "https://picsum.photos/seed/scarab/150/150" },
+        { "name": "Pharaoh's Golden Mask", "rarity": "Legendary", "chance": 4, "value": 1500, "icon": "👑", "color": "#eab308", "image": "https://picsum.photos/seed/pharaoh_mask/150/150" },
+        { "name": "Atlantis Trident of Power", "rarity": "Mythic", "chance": 1, "value": 7800, "icon": "🔱", "color": "#ef4444", "image": "https://picsum.photos/seed/atlantis_trident/150/150" }
+      ]
+    },
+    {
+      "id": "crystal",
+      "name": "Crystal Chest",
+      "price": 270,
+      "icon": "💎",
+      "color": "from-teal-400 to-cyan-600",
+      "background": "linear-gradient(135deg, #051f1f 0%, #0a3838 100%)",
+      "image": "https://picsum.photos/seed/crystal_chest/400/400",
+      "items": [
+        { "name": "Cloudy Quartz Shard", "rarity": "Common", "chance": 60, "value": 28, "icon": "🪨", "color": "#a1a1aa", "image": "https://picsum.photos/seed/quartz/150/150" },
+        { "name": "Sapphire Gemstone", "rarity": "Rare", "chance": 25, "value": 135, "icon": "💠", "color": "#3b82f6", "image": "https://picsum.photos/seed/sapphire/150/150" },
+        { "name": "Amethyst Geode", "rarity": "Epic", "chance": 10, "value": 540, "icon": "🔮", "color": "#a855f7", "image": "https://picsum.photos/seed/amethyst/150/150" },
+        { "name": "Flawless Diamond", "rarity": "Legendary", "chance": 4, "value": 1800, "icon": "💎", "color": "#eab308", "image": "https://picsum.photos/seed/diamond/150/150" },
+        { "name": "Prismatic Infinity Stone", "rarity": "Mythic", "chance": 1, "value": 9500, "icon": "✨", "color": "#ef4444", "image": "https://picsum.photos/seed/infinity_stone/150/150" }
+      ]
     }
-  };
-  rodaDefault = {
-    prizes: [
-      { id: "1", name: "Diamond Lock", icon: "💎", rarity: "Legendary", value: 100, chance: 5, image: "/images/diamond_lock.png", color: "#eab308" },
-      { id: "2", name: "World Lock", icon: "🔒", rarity: "Rare", value: 10, chance: 20, image: "/images/world_lock.png", color: "#3b82f6" },
-      { id: "3", name: "Dirt", icon: "🟫", rarity: "Common", value: 1, chance: 40, image: "/images/dirt.png", color: "#a1a1aa" }
-    ]
-  };
-  permainanDefault = {
-    prizes: [
-      { name: "Cosmic Dust", rarity: "Common", value: 100, icon: "🧪", image: "https://picsum.photos/seed/stardust/150/150" },
-      { name: "Nebula Fragment", rarity: "Rare", value: 500, icon: "💫", image: "https://picsum.photos/seed/nebula/150/150" }
-    ]
-  };
-}
+  ],
+  "gameSettings": {
+    "defaultSpinDurationMs": 5500,
+    "fastSpinDurationMs": 1500,
+    "soundEnabled": true,
+    "enableMotionBlur": true,
+    "enableRarityGlow": true,
+    "classicRealisticEasing": true,
+    "spinEasing": "cubic-bezier(0.04, 0.84, 0.12, 1)",
+    "soundTickFrequencyHz": 220,
+    "showInteractiveSettings": true,
+    "maxTapeSize": 65,
+    "winningTargetIndex": 52,
+    "pointerShadowGlowHex": "#38bdf8",
+    "winRateMultiplier": 1.0,
+    "mythicChanceBoost": 0.0
+  }
+};
+
+const rodaDefault: any = {
+  "prizes": [
+    { "id": "1", "name": "Luxury Hypercar 🏎️", "image": "/images/wheel_car.png", "color": "#0284c7", "chance": 5 },
+    { "id": "2", "name": "Fine Gold Bullion 🪙", "image": "/images/wheel_gold.png", "color": "#38bdf8", "chance": 12 },
+    { "id": "3", "name": "iPhone 15 Pro 📱", "image": "/images/wheel_phone.png", "color": "#0369a1", "chance": 18 },
+    { "id": "4", "name": "Bali Vacation Trip 🏝️", "image": "/images/wheel_island.png", "color": "#0c4a6e", "chance": 15 },
+    { "id": "5", "name": "PlayStation 5 Console 🎮", "image": "/images/wheel_console.png", "color": "#1e3a8a", "chance": 22 },
+    { "id": "6", "name": "Legendary Mystery Box 🎁", "image": "/images/wheel_mystery.png", "color": "#172554", "chance": 28 }
+  ],
+  "settings": {
+    "speed": "normal",
+    "duration": 6,
+    "autoRemove": false,
+    "soundEnabled": true,
+    "canvasSize": 500,
+    "glowAnimation": true,
+    "textGlowEffect": true,
+    "shadowDepth": 15,
+    "colorHighlightHex": "#38bdf8",
+    "backgroundBlurAmount": "20px"
+  }
+};
+
+const permainanDefault: any = {
+  "crashSettings": {
+    "countdownSeconds": 3,
+    "defaultPickMultiplier": "2.00",
+    "multiplierTickIntervalMs": 100,
+    "growthCoefficient": 0.00012,
+    "soundVolumeMultiplier": 0.1,
+    "maxPossibleMultiplier": 100.0,
+    "enableStarsBackground": true,
+    "starDensityCount": 95,
+    "starsDriftWarpSpeed": 1.4,
+    "cometParticleColor": "#38bdf8",
+    "chartGlowBorderHex": "#38bdf8",
+    "houseEdgeFactor": 1.0,
+    "probabilityWeights": {
+      "earlyCrashChance": 0.45,
+      "earlyCrashMax": 2.99,
+      "mediumCrashChance": 0.35,
+      "mediumCrashMax": 6.99,
+      "highCrashChance": 0.16,
+      "highCrashMax": 15.99,
+      "jackpotCrashChance": 0.04,
+      "jackpotCrashMax": 100.0
+    }
+  },
+  "prizes": [
+    { "id": "c1", "name": "Star Dust Vial 🧪", "rarity": "Common", "value": 25, "icon": "🧪", "image": "https://picsum.photos/seed/stardust/150/150" },
+    { "id": "c2", "name": "Cosmic Voyager Helmet 🪖", "rarity": "Rare", "value": 150, "icon": "🪖", "image": "https://picsum.photos/seed/cosmic_helmet/150/150" },
+    { "id": "c3", "name": "Space Cadet Thruster Pack 🚀", "rarity": "Epic", "value": 450, "icon": "🚀", "image": "https://picsum.photos/seed/jetpack/150/150" },
+    { "id": "c4", "name": "Asteroid Golden Bullet 🪙", "rarity": "Legendary", "value": 1200, "icon": "🪙", "image": "https://picsum.photos/seed/asteroid_gold/150/150" },
+    { "id": "c5", "name": "Quantum Warp Engine Core ⚡", "rarity": "Mythic", "value": 5000, "icon": "⚡", "image": "https://picsum.photos/seed/quantum_core/150/150" }
+  ],
+  "leaderboard": [
+    { "name": "Dewajitu_Gacor", "score": 9840, "date": "2026-05-28" },
+    { "name": "Sutan_Jackpot", "score": 7520, "date": "2026-05-28" },
+    { "name": "Raja_Scatter", "score": 4900, "date": "2026-05-28" }
+  ]
+};
+
+console.log('[CONFIG] Loaded complete default configs:', {
+  chests: caseOpeningDefault.chests?.length || 0,
+  wheelPrizes: rodaDefault.prizes?.length || 0,
+  crashPrizes: permainanDefault.prizes?.length || 0
+});
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -707,31 +984,33 @@ async function handleGetUsers(res: any) {
 
 // ─── Update Balance Handler ────────────────────────────────────────────────────
 async function handleUpdateBalance(userId: string, body: any, res: any) {
-  const cleanBalance = parseFloat(body.balance);
+  const { balance } = body;
 
-  if (isNaN(cleanBalance)) {
+  if (balance === undefined || balance < 0) {
     return res.status(400).json({ error: 'Saldo tidak valid!' });
   }
 
   if (isSupabaseConfigured && supabaseAdmin) {
     try {
-      const { data: updated, error } = await supabaseAdmin
+      const { data: updatedUser, error } = await supabaseAdmin
         .from('users')
-        .update({ balance: cleanBalance })
+        .update({ balance: parseFloat(balance) })
         .eq('id', userId)
         .select('*')
         .single();
 
       if (error) throw error;
-      return res.json({ success: true, user: updated });
+      const { password: _, ...safeUser } = updatedUser as any;
+      return res.json({ success: true, user: safeUser });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   } else {
     const user = localDb.users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
-    user.balance = cleanBalance;
-    return res.json({ success: true, user });
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan!' });
+    user.balance = parseFloat(balance);
+    const { password: _, ...safeUser } = user;
+    return res.json({ success: true, user: safeUser });
   }
 }
 
@@ -739,27 +1018,36 @@ async function handleUpdateBalance(userId: string, body: any, res: any) {
 async function handleEditUser(userId: string, body: any, res: any) {
   const { username, email, is_staff } = body;
 
+  if (!username && !email && is_staff === undefined) {
+    return res.status(400).json({ error: 'Tidak ada data yang diubah!' });
+  }
+
+  const updates: any = {};
+  if (username) updates.username = username.trim().toLowerCase();
+  if (email) updates.email = email.trim().toLowerCase();
+  if (is_staff !== undefined) updates.is_staff = is_staff;
+
   if (isSupabaseConfigured && supabaseAdmin) {
     try {
-      const { data: updated, error } = await supabaseAdmin
+      const { data: updatedUser, error } = await supabaseAdmin
         .from('users')
-        .update({ username, email, is_staff: !!is_staff })
+        .update(updates)
         .eq('id', userId)
         .select('*')
         .single();
 
       if (error) throw error;
-      return res.json({ success: true, user: updated });
+      const { password: _, ...safeUser } = updatedUser as any;
+      return res.json({ success: true, user: safeUser });
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   } else {
     const user = localDb.users.find(u => u.id === userId);
-    if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
-    if (username) user.username = username;
-    if (email) user.email = email;
-    if (is_staff !== undefined) user.is_staff = is_staff;
-    return res.json({ success: true, user });
+    if (!user) return res.status(404).json({ error: 'User tidak ditemukan!' });
+    Object.assign(user, updates);
+    const { password: _, ...safeUser } = user;
+    return res.json({ success: true, user: safeUser });
   }
 }
 
@@ -786,7 +1074,7 @@ async function handleClearInventory(userId: string, res: any) {
 // ─── Delete Item Handler ───────────────────────────────────────────────────────
 async function handleDeleteItem(itemId: string | undefined, res: any) {
   if (!itemId) {
-    return res.status(400).json({ error: 'Item ID required' });
+    return res.status(400).json({ error: 'Item ID diperlukan!' });
   }
 
   if (isSupabaseConfigured && supabaseAdmin) {
@@ -803,116 +1091,118 @@ async function handleDeleteItem(itemId: string | undefined, res: any) {
     }
   } else {
     const index = localDb.inventory.findIndex(i => i.id === itemId);
-    if (index !== -1) {
-      localDb.inventory.splice(index, 1);
-      return res.json({ success: true, message: 'Item berhasil dihapus!' });
-    }
-    return res.status(404).json({ error: 'Item tidak ditemukan' });
+    if (index === -1) return res.status(404).json({ error: 'Item tidak ditemukan!' });
+    localDb.inventory.splice(index, 1);
+    return res.json({ success: true, message: 'Item berhasil dihapus!' });
   }
 }
 
 // ─── Update Config Handler ─────────────────────────────────────────────────────
 async function handleUpdateConfig(gameType: string, body: any, res: any) {
-  const configPayload = body.config;
+  const { config } = body;
 
-  if (!configPayload) {
-    return res.status(400).json({ error: 'Payload config data kosong' });
+  if (!config) {
+    return res.status(400).json({ error: 'Config data diperlukan!' });
   }
 
-  const client = supabaseAdmin || supabase;
-
-  if (isSupabaseConfigured && client) {
+  if (isSupabaseConfigured && supabaseAdmin) {
     try {
-      const { error } = await client
+      const { data: existing } = await supabaseAdmin
         .from('game_configs')
-        .upsert({
-          game_type: gameType,
-          config_data: configPayload,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'game_type' });
+        .select('id')
+        .eq('game_type', gameType)
+        .maybeSingle();
 
-      if (error) throw error;
-      return res.json({ success: true, message: `Berhasil mengupdate konfigurasi ${gameType}!` });
+      if (existing) {
+        const { data: updated, error } = await supabaseAdmin
+          .from('game_configs')
+          .update({ config_data: config })
+          .eq('game_type', gameType)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return res.json({ success: true, config: updated.config_data });
+      } else {
+        const { data: inserted, error } = await supabaseAdmin
+          .from('game_configs')
+          .insert({ game_type: gameType, config_data: config })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return res.json({ success: true, config: inserted.config_data });
+      }
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   } else {
-    localDb.configs[gameType] = JSON.parse(JSON.stringify(configPayload));
-    return res.json({ success: true, message: `Berhasil mengupdate konfigurasi ${gameType} di memori lokal!` });
+    localDb.configs[gameType] = config;
+    return res.json({ success: true, config });
   }
 }
 
 // ─── Reset Config Handler ──────────────────────────────────────────────────────
 async function handleResetConfig(gameType: string, res: any) {
   let defaultConfig: any = null;
-  if (gameType === 'cases') defaultConfig = caseOpeningDefault;
-  else if (gameType === 'wheel') defaultConfig = rodaDefault;
-  else if (gameType === 'crash') defaultConfig = permainanDefault;
-  else return res.status(404).json({ error: 'Game type tidak dikenal' });
 
-  const client = supabaseAdmin || supabase;
+  if (gameType === 'cases') defaultConfig = JSON.parse(JSON.stringify(caseOpeningDefault));
+  else if (gameType === 'wheel') defaultConfig = JSON.parse(JSON.stringify(rodaDefault));
+  else if (gameType === 'crash') defaultConfig = JSON.parse(JSON.stringify(permainanDefault));
+  else return res.status(400).json({ error: 'Game type tidak dikenal!' });
 
-  if (isSupabaseConfigured && client) {
+  if (isSupabaseConfigured && supabaseAdmin) {
     try {
-      await client
+      const { data: existing } = await supabaseAdmin
         .from('game_configs')
-        .delete()
-        .eq('game_type', gameType);
+        .select('id')
+        .eq('game_type', gameType)
+        .maybeSingle();
 
-      const { error } = await client
-        .from('game_configs')
-        .insert({
-          game_type: gameType,
-          config_data: defaultConfig,
-          updated_at: new Date().toISOString()
-        });
+      if (existing) {
+        const { data: updated, error } = await supabaseAdmin
+          .from('game_configs')
+          .update({ config_data: defaultConfig })
+          .eq('game_type', gameType)
+          .select('*')
+          .single();
 
-      if (error) throw error;
-      return res.json({ success: true, message: `Config ${gameType} berhasil direset ke default!`, config: defaultConfig });
+        if (error) throw error;
+        return res.json({ success: true, config: updated.config_data });
+      } else {
+        const { data: inserted, error } = await supabaseAdmin
+          .from('game_configs')
+          .insert({ game_type: gameType, config_data: defaultConfig })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return res.json({ success: true, config: inserted.config_data });
+      }
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   } else {
-    localDb.configs[gameType] = JSON.parse(JSON.stringify(defaultConfig));
-    return res.json({ success: true, message: `Config ${gameType} berhasil direset!`, config: defaultConfig });
+    localDb.configs[gameType] = defaultConfig;
+    return res.json({ success: true, config: defaultConfig });
   }
 }
 
 // ─── Online Users Handler ──────────────────────────────────────────────────────
 async function handleOnlineUsers(res: any) {
-  let realUsers: any[] = [];
-
-  if (isSupabaseConfigured && supabaseAdmin) {
+  if (isSupabaseConfigured && supabase) {
     try {
-      const { data } = await supabaseAdmin
+      const { data: users, error } = await supabase
         .from('users')
-        .select('id, username, balance, is_staff');
-      realUsers = data || [];
-    } catch {
-      realUsers = localDb.users.map(({ id, username, balance, is_staff }) => ({ id, username, balance, is_staff }));
+        .select('username')
+        .limit(10);
+
+      if (error) throw error;
+      return res.json({ online: users?.length || 0, users: users || [] });
+    } catch (e: any) {
+      return res.json({ online: 0, users: [] });
     }
   } else {
-    realUsers = localDb.users.map(({ id, username, balance, is_staff }) => ({ id, username, balance, is_staff }));
+    return res.json({ online: localDb.users.length, users: localDb.users.map(u => ({ username: u.username })) });
   }
-
-  const activities = [
-    'Membuka Golden Chest 🎁',
-    'Memutar Roda Hadiah 🎡',
-    'Bertaruh di Crash Game 🚀',
-    'Mendapatkan 1.82x di Crash! 🎉',
-    'Idle di Lobby 💬',
-    'Deposit 200 WL ke staff 🏦',
-    'Membuka Legendary Chest 👑',
-    'Withdraw 1 DL sukses 💎',
-    'Membuka Weapon Chest ⚔️'
-  ];
-
-  const virtualUsers = [
-    { id: 'v1', username: 'GrowDev_Id', balance: 452300, is_staff: false, activity: activities[0] },
-    { id: 'v2', username: 'WLSeller99', balance: 1250000, is_staff: false, activity: activities[2] },
-    { id: 'v3', username: 'NandX_Rich', balance: 13540000, is_staff: false, activity: activities[3] }
-  ];
-
-  const combined = [...realUsers.slice(0, 5), ...virtualUsers];
-  return res.json({ users: combined });
 }
