@@ -494,10 +494,10 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display font-black text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 tracking-tight uppercase">
-                GALAXY CASINO
+                 ReyaBet
               </h1>
               <p className="text-[9px] text-slate-400 font-mono tracking-widest font-black uppercase">
-                Premium Multi-Game platform
+                Online gacha in ReyaPs
               </p>
             </div>
           </div>

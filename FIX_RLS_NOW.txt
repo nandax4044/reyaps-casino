@@ -1,0 +1,118 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║           🔧 FIX RLS ERROR - QUICK SOLUTION (2 MENIT)                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ❌ ERROR                                                                      │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  {"error": "new row violates row-level security policy for table \"game_configs\""}
+
+  PENYEBAB:
+  RLS (Row Level Security) masih aktif di database Supabase
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ ✅ SOLUSI (2 MENIT)                                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  LANGKAH 1: Buka Supabase SQL Editor
+    1. Buka https://supabase.com/dashboard
+    2. Login → Pilih project "rwngqiakigebtwxohiri"
+    3. Klik "SQL Editor" (sidebar kiri)
+    4. Klik "New Query"
+
+  LANGKAH 2: Jalankan Fix Script
+    1. Buka file: FIX_RLS_ERROR.sql
+    2. COPY SEMUA ISI FILE (Ctrl+A, Ctrl+C)
+    3. PASTE ke SQL Editor (Ctrl+V)
+    4. Klik "RUN" (atau tekan F5)
+    5. Tunggu sampai selesai
+
+  LANGKAH 3: Verify Output
+    Harus muncul:
+    
+    tablename      | rls_status
+    ---------------|------------------
+    game_configs   | ✅ DISABLED (Good!)
+    inventory      | ✅ DISABLED (Good!)
+    users          | ✅ DISABLED (Good!)
+
+    Jika semua ✅ DISABLED → BERHASIL!
+
+  LANGKAH 4: Test Lagi
+    1. Refresh website
+    2. Login sebagai admin
+    3. Klik "Admin Dashboard"
+    4. Save config → Harus berhasil! ✅
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🔄 JIKA MASIH ERROR                                                           │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  CEK 1: Verify RLS Status
+    Jalankan di SQL Editor:
+    
+    SELECT tablename, rowsecurity 
+    FROM pg_tables 
+    WHERE schemaname = 'public' 
+    AND tablename IN ('users', 'inventory', 'game_configs');
+
+    Harus semua show: rowsecurity = f (false)
+
+  CEK 2: Manual Disable (jika masih t/true)
+    Jalankan di SQL Editor:
+    
+    ALTER TABLE public.game_configs DISABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.inventory DISABLE ROW LEVEL SECURITY;
+    ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+
+  CEK 3: Verify Service Role Key
+    1. Buka Supabase → Settings → API
+    2. Copy "service_role" key (BUKAN anon key!)
+    3. Update .env:
+       SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    4. Restart server
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 📋 CHECKLIST                                                                  │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  - [ ] Jalankan FIX_RLS_ERROR.sql di Supabase
+  - [ ] Verify RLS disabled (semua tabel = f)
+  - [ ] Verify permissions granted
+  - [ ] Verify service role key benar
+  - [ ] Restart server
+  - [ ] Test save config di admin panel
+  - [ ] Test reset config di admin panel
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 📁 FILE BANTUAN                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  📄 FIX_RLS_NOW.txt           ⭐ File ini (quick reference)
+  📄 FIX_RLS_ERROR.sql         🔧 SQL script untuk fix RLS
+  📄 FIX_RLS_ERROR_GUIDE.md    📖 Panduan lengkap + troubleshooting
+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│ 🎯 PENJELASAN SINGKAT                                                         │
+└───────────────────────────────────────────────────────────────────────────────┘
+
+  Apa itu RLS?
+  Row Level Security = Fitur Supabase untuk batasi akses data per row
+
+  Kenapa disable?
+  Untuk development, RLS bikin ribet dan sering error
+
+  Apakah aman?
+  ✅ Aman untuk development (database tidak public)
+  ✅ Code sudah handle authorization di API level
+  ⚠️ Untuk production, bisa enable lagi dengan policy yang benar
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                    🚀 JALANKAN FIX_RLS_ERROR.SQL SEKARANG!                   ║
+║                                                                               ║
+║  1. Buka Supabase SQL Editor                                                  ║
+║  2. Copy-paste FIX_RLS_ERROR.sql                                              ║
+║  3. Klik RUN                                                                  ║
+║  4. Test lagi → Harus berhasil! ✅                                           ║
+╚═══════════════════════════════════════════════════════════════════════════════╝

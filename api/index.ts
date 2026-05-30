@@ -2,20 +2,14 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-// Import default configs
-const caseOpeningDefault = {
-  "cases": [],
-  "gameSettings": {
-    "defaultSpinDurationMs": 5500,
-    "fastSpinDurationMs": 1500,
-    "soundTickFrequencyHz": 220,
-    "pointerShadowGlowHex": "#ea580c",
-    "spinEasing": "cubic-bezier(0.04, 0.84, 0.12, 1)"
-  }
-};
+// Import default configs from JSON files
+import caseOpeningData from './case_opening.json';
+import rodaData from './roda.json';
+import permainanData from './permainan.json';
 
-const rodaDefault = { "prizes": [] };
-const permainanDefault = { "prizes": [] };
+const caseOpeningDefault = caseOpeningData;
+const rodaDefault = rodaData;
+const permainanDefault = permainanData;
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || '';

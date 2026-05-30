@@ -1,0 +1,73 @@
+{
+  "crashSettings": {
+    "countdownSeconds": 3,
+    "defaultPickMultiplier": "2.00",
+    "multiplierTickIntervalMs": 100,
+    "growthCoefficient": 0.00012,
+    "soundVolumeMultiplier": 0.1,
+    "maxPossibleMultiplier": 100.0,
+    "enableStarsBackground": true,
+    "starDensityCount": 95,
+    "starsDriftWarpSpeed": 1.4,
+    "cometParticleColor": "#38bdf8",
+    "chartGlowBorderHex": "#38bdf8",
+    "houseEdgeFactor": 1.0,
+    "probabilityWeights": {
+      "earlyCrashChance": 0.45,
+      "earlyCrashMax": 2.99,
+      "mediumCrashChance": 0.35,
+      "mediumCrashMax": 6.99,
+      "highCrashChance": 0.16,
+      "highCrashMax": 15.99,
+      "jackpotCrashChance": 0.04,
+      "jackpotCrashMax": 100.0
+    }
+  },
+  "prizes": [
+    {
+      "id": "c1",
+      "name": "Star Dust Vial 🧪",
+      "rarity": "Common",
+      "value": 25,
+      "icon": "🧪",
+      "image": "https://picsum.photos/seed/stardust/150/150"
+    },
+    {
+      "id": "c2",
+      "name": "Cosmic Voyager Helmet 🪖",
+      "rarity": "Rare",
+      "value": 150,
+      "icon": "🪖",
+      "image": "https://picsum.photos/seed/cosmic_helmet/150/150"
+    },
+    {
+      "id": "c3",
+      "name": "Space Cadet Thruster Pack 🚀",
+      "rarity": "Epic",
+      "value": 450,
+      "icon": "🚀",
+      "image": "https://picsum.photos/seed/jetpack/150/150"
+    },
+    {
+      "id": "c4",
+      "name": "Asteroid Golden Bullet 🪙",
+      "rarity": "Legendary",
+      "value": 1200,
+      "icon": "🪙",
+      "image": "https://picsum.photos/seed/asteroid_gold/150/150"
+    },
+    {
+      "id": "c5",
+      "name": "Quantum Warp Engine Core ⚡",
+      "rarity": "Mythic",
+      "value": 5000,
+      "icon": "⚡",
+      "image": "https://picsum.photos/seed/quantum_core/150/150"
+    }
+  ],
+  "leaderboard": [
+    { "name": "Dewajitu_Gacor", "score": 9840, "date": "2026-05-28" },
+    { "name": "Sutan_Jackpot", "score": 7520, "date": "2026-05-28" },
+    { "name": "Raja_Scatter", "score": 4900, "date": "2026-05-28" }
+  ]
+}
