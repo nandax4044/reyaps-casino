@@ -102,21 +102,29 @@ export default function App() {
 
   const loadWheelConfig = async () => {
     try {
-      const data = await API.getGameConfig('wheel');
-      setPrizes(data.prizes || data);
-    } catch (e) {
-      console.warn('Dynamic config wheel failed, loading fallback default prizes.', e);
+      // First set default prizes immediately so wheel always has data
       const saved = localStorage.getItem('wheel_spinner_prizes');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
             setPrizes(parsed);
-            return;
           }
         } catch (e) {}
+      } else {
+        setPrizes(DEFAULT_PRIZES);
       }
-      setPrizes(DEFAULT_PRIZES);
+      // Then try API for admin-updated config
+      const data = await API.getGameConfig('wheel');
+      const apiPrizes = data.prizes || data;
+      if (Array.isArray(apiPrizes) && apiPrizes.length > 0) {
+        setPrizes(apiPrizes);
+      }
+    } catch (e) {
+      console.warn('Dynamic config wheel failed, using fallback.', e);
+      if (prizes.length === 0) {
+        setPrizes(DEFAULT_PRIZES);
+      }
     }
   };
 

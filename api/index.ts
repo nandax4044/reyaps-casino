@@ -407,6 +407,12 @@ export default async function handler(req: any, res: any) {
       return await handleLogin(body, res);
     }
 
+    // ── PUBLIC: Game config routes (no auth needed) ──────────────────────────
+    if (path.startsWith('/games/config/') && method === 'GET') {
+      const gameType = path.split('/').pop();
+      return await handleGetConfig(gameType, res);
+    }
+
     // Protected routes (require auth)
     const authHeader = headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -440,12 +446,6 @@ export default async function handler(req: any, res: any) {
 
     if (path === '/user/add-win' && method === 'POST') {
       return await handleAddWin(user, body, res);
-    }
-
-    // Game config routes
-    if (path.startsWith('/games/config/') && method === 'GET') {
-      const gameType = path.split('/').pop();
-      return await handleGetConfig(gameType, res);
     }
 
     // Admin routes

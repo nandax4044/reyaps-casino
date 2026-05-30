@@ -79,19 +79,33 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
   const loadChestsConfig = async () => {
     try {
       setLoadingConfig(true);
-      const data = await API.getGameConfig('cases');
-      console.log('[CASE CONFIG] Raw data from API:', data);
-      // Handle multiple formats: { cases: [...] }, { chests: [...] }, or [...]
-      const chestsArray = Array.isArray(data) 
-        ? data 
-        : (data.cases || data.chests || []);
-      console.log('[CASE CONFIG] Parsed chests array:', chestsArray);
-      setChests(chestsArray);
+      // First, immediately set local data so chests always show
+      const localChests = chestsData.chests || (chestsData as any).cases || [];
+      if (Array.isArray(localChests) && localChests.length > 0) {
+        setChests(localChests);
+      }
+      // Then try to fetch from API to get any admin-updated config
+      try {
+        const data = await API.getGameConfig('cases');
+        console.log('[CASE CONFIG] Raw data from API:', data);
+        const chestsArray = Array.isArray(data)
+          ? data
+          : (data.cases || data.chests || []);
+        if (Array.isArray(chestsArray) && chestsArray.length > 0) {
+          console.log('[CASE CONFIG] Using API data:', chestsArray.length, 'chests');
+          setChests(chestsArray);
+        } else {
+          console.warn('[CASE CONFIG] API returned empty, keeping local data');
+        }
+      } catch (apiErr) {
+        console.warn('[CASE CONFIG] API fetch failed, using local JSON fallback:', apiErr);
+        // Already set local data above, nothing to do
+      }
     } catch (e) {
-      console.warn('Gagal memuat dynamic config cases, fallback ke file lokal.', e);
-      const fallback = chestsData.chests || chestsData.cases || chestsData;
+      console.error('[CASE CONFIG] Fatal error loading chests:', e);
+      // Last resort fallback
+      const fallback = (chestsData as any).chests || (chestsData as any).cases || chestsData;
       const chestsArray = Array.isArray(fallback) ? fallback : [];
-      console.log('[CASE CONFIG] Using fallback:', chestsArray);
       setChests(chestsArray);
     } finally {
       setLoadingConfig(false);

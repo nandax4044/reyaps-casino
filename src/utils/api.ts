@@ -97,7 +97,20 @@ export const API = {
   },
 
   async getGameConfig(gameType: 'cases' | 'wheel' | 'crash') {
-    return request(`/api/games/config/${gameType}`);
+    // Game config is public - try without token first, fallback with token
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`/api/games/config/${gameType}`, { headers });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
   },
 
   async getOnlinePlayers() {
