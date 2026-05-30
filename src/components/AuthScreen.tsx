@@ -62,7 +62,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
             }} />
           </div>
           <h1 className="font-display font-black text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 tracking-tight">
-            DEWAPIN SPIN & CASES
+            Reya Bet
           </h1>
           <p className="text-xs text-slate-400 font-mono tracking-widest mt-1 uppercase">
             SECURE SUPABASE SYSTEM GATE
@@ -211,7 +211,7 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
         {/* Subtle footer */}
         <p className="text-center text-[10px] text-slate-500 font-mono mt-6">
-          DEWAPIN SYSTEM CORE v2.8 &bull; PRIVATE CLIENT
+          Reyabet SYSTEM CORE v2.8 &bull; PRIVATE CLIENT
         </p>
       </div>
     </div>

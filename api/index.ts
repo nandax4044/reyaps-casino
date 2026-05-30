@@ -1,15 +1,62 @@
 // Vercel Serverless Function Handler
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-// Import default configs from JSON files
-import caseOpeningData from './case_opening.json';
-import rodaData from './roda.json';
-import permainanData from './permainan.json';
+// Load default configs from JSON files
+let caseOpeningDefault: any;
+let rodaDefault: any;
+let permainanDefault: any;
 
-const caseOpeningDefault = caseOpeningData;
-const rodaDefault = rodaData;
-const permainanDefault = permainanData;
+try {
+  // Try to load from files (for Vercel)
+  const apiDir = __dirname || process.cwd();
+  caseOpeningDefault = JSON.parse(readFileSync(join(apiDir, 'case_opening.json'), 'utf-8'));
+  rodaDefault = JSON.parse(readFileSync(join(apiDir, 'roda.json'), 'utf-8'));
+  permainanDefault = JSON.parse(readFileSync(join(apiDir, 'permainan.json'), 'utf-8'));
+} catch (e) {
+  // Fallback to minimal data if files not found
+  console.error('[CONFIG] Failed to load JSON files:', e);
+  caseOpeningDefault = {
+    chests: [
+      {
+        id: "fishing",
+        name: "Fishing Chest",
+        price: 50,
+        icon: "🎣",
+        color: "from-cyan-500 to-blue-600",
+        image: "/images/fishing_chest.png",
+        items: [
+          { name: "Wigly", rarity: "Common", chance: 60, value: 5, icon: "🥾", color: "#a1a1aa", image: "/images/wigly.png" },
+          { name: "Cotd", rarity: "Rare", chance: 25, value: 30, icon: "🐟", color: "#3b82f6", image: "/images/cotd.png" },
+          { name: "Golden Rod", rarity: "Epic", chance: 10, value: 2500, icon: "🧵", color: "#a855f7", image: "/images/goldenrod.png" },
+          { name: "Fishing Hat", rarity: "Legendary", chance: 4, value: 7000, icon: "🎣", color: "#eab308", image: "/images/hatfishing.png" }
+        ]
+      }
+    ],
+    gameSettings: {
+      defaultSpinDurationMs: 5500,
+      fastSpinDurationMs: 1500,
+      soundTickFrequencyHz: 220,
+      pointerShadowGlowHex: "#38bdf8",
+      spinEasing: "cubic-bezier(0.04, 0.84, 0.12, 1)"
+    }
+  };
+  rodaDefault = {
+    prizes: [
+      { id: "1", name: "Diamond Lock", icon: "💎", rarity: "Legendary", value: 100, chance: 5, image: "/images/diamond_lock.png", color: "#eab308" },
+      { id: "2", name: "World Lock", icon: "🔒", rarity: "Rare", value: 10, chance: 20, image: "/images/world_lock.png", color: "#3b82f6" },
+      { id: "3", name: "Dirt", icon: "🟫", rarity: "Common", value: 1, chance: 40, image: "/images/dirt.png", color: "#a1a1aa" }
+    ]
+  };
+  permainanDefault = {
+    prizes: [
+      { name: "Cosmic Dust", rarity: "Common", value: 100, icon: "🧪", image: "https://picsum.photos/seed/stardust/150/150" },
+      { name: "Nebula Fragment", rarity: "Rare", value: 500, icon: "💫", image: "https://picsum.photos/seed/nebula/150/150" }
+    ]
+  };
+}
 
 // Supabase Setup
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -179,7 +226,11 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error('[API ERROR]', error);
-    return res.status(500).json({ error: error.message || 'Internal server error' });
+    console.error('[API ERROR STACK]', error.stack);
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
 
@@ -321,38 +372,52 @@ async function handleRegister(body: any, res: any) {
 
 // ─── Login Handler ─────────────────────────────────────────────────────────────
 async function handleLogin(body: any, res: any) {
+  console.log('[LOGIN] Request received:', { loginKey: body?.loginKey, hasPassword: !!body?.password });
+  
   const { loginKey, password } = body;
 
   if (!loginKey || !password) {
+    console.log('[LOGIN] Missing credentials');
     return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
   }
 
   const slugKey = loginKey.trim().toLowerCase();
+  console.log('[LOGIN] Attempting login for:', slugKey);
 
   if (isSupabaseConfigured && supabase) {
     try {
       let loginEmail = slugKey;
 
       if (!slugKey.includes('@')) {
+        console.log('[LOGIN] Looking up username:', slugKey);
         const { data: foundUser, error: findError } = await supabase
           .from('users')
           .select('email')
           .eq('username', slugKey)
           .maybeSingle();
 
-        if (findError || !foundUser) {
+        if (findError) {
+          console.error('[LOGIN] Username lookup error:', findError);
+          return res.status(400).json({ error: 'Akun tidak ditemukan!' });
+        }
+        
+        if (!foundUser) {
+          console.log('[LOGIN] Username not found:', slugKey);
           return res.status(400).json({ error: 'Akun tidak ditemukan!' });
         }
 
         loginEmail = foundUser.email;
+        console.log('[LOGIN] Found email for username:', loginEmail);
       }
 
+      console.log('[LOGIN] Attempting Supabase auth with email:', loginEmail);
       const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
         password: password
       });
 
       if (signInError) {
+        console.error('[LOGIN] Supabase auth error:', signInError);
         if (signInError.message.includes('Invalid login credentials')) {
           return res.status(400).json({ error: 'Email/Username atau Password salah!' });
         }
@@ -360,19 +425,28 @@ async function handleLogin(body: any, res: any) {
       }
 
       if (!sessionData?.user || !sessionData?.session) {
+        console.error('[LOGIN] No session data returned');
         return res.status(400).json({ error: 'Login gagal. Coba lagi.' });
       }
 
+      console.log('[LOGIN] Auth successful, fetching user profile:', sessionData.user.id);
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', sessionData.user.id)
         .single();
 
-      if (userError || !user) {
+      if (userError) {
+        console.error('[LOGIN] User profile fetch error:', userError);
+        return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
+      }
+      
+      if (!user) {
+        console.error('[LOGIN] User profile not found');
         return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
       }
 
+      console.log('[LOGIN] Login successful for user:', user.username);
       const { password: _, ...safeUser } = user as any;
       return res.json({
         success: true,
@@ -381,9 +455,11 @@ async function handleLogin(body: any, res: any) {
       });
 
     } catch (e: any) {
+      console.error('[LOGIN] Exception:', e);
       return res.status(500).json({ error: 'Database service failure: ' + e.message });
     }
   } else {
+    console.log('[LOGIN] Using local memory mode');
     const user = localDb.users.find(u => u.email === slugKey || u.username === slugKey);
     if (!user) {
       return res.status(400).json({ error: 'Akun tidak terdaftar!' });
