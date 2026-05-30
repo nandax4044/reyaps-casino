@@ -35,7 +35,9 @@ import {
   ShieldCheck,
   LogOut,
   Coins,
-  ShieldAlert
+  ShieldAlert,
+  Users,
+  MessageCircle
 } from 'lucide-react';
 
 export const PngEmoji = ({ src, alt, className = "w-4 h-4 inline-block object-contain" }: { src: string; alt: string; className?: string }) => {
@@ -96,6 +98,7 @@ export default function App() {
 
   // --- Dynamic Tab Selector ---
   const [activeGame, setActiveGame] = useState<'wheel' | 'crash' | 'cases' | 'profile' | 'admin'>('cases');
+  const [mobileSidebarTab, setMobileSidebarTab] = useState<'players' | 'chat'>('players');
 
   // --- Wheel Game Configuration Loading ---
   const [showSettings, setShowSettings] = useState(false);
@@ -619,10 +622,15 @@ export default function App() {
       )}
 
       {/* MAIN LAYOUT BODY */}
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 relative z-10 flex flex-col justify-start">
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* LEFT COLUMN: ACTIVE GAME OR DASHBOARD MODULES */}
-          <div className="lg:col-span-9 col-span-12 flex flex-col gap-6 w-full">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-3 md:p-6 lg:p-8 relative z-10 flex flex-col justify-start">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
+          {/* LEFT COLUMN: ONLINE PLAYERS - Hidden on mobile, visible on lg+ */}
+          <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
+            <OnlinePlayers currentUser={user} />
+          </div>
+
+          {/* CENTER COLUMN: ACTIVE GAME OR DASHBOARD MODULES */}
+          <div className="lg:col-span-6 col-span-12 flex flex-col gap-4 md:gap-6 w-full">
             {activeGame === 'crash' && (
           <div className="w-full animate-fade-in">
             <CrashGame user={user} refreshUser={fetchUserProfile} />
@@ -652,7 +660,7 @@ export default function App() {
         )}
 
         {activeGame === 'wheel' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start w-full animate-fade-in">
             
             {/* LEFT COLUMN: THE CENTRAL WHEEL VIEWPORT & SPIN TRIGGER PANEL */}
             <section className={`${
@@ -897,10 +905,39 @@ export default function App() {
         )}
           </div>
 
-          {/* RIGHT COLUMN: REALTIME ACTIVE ONLINE PLAYERS LIST & GLOBAL CHAT */}
-          <div className="lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px] flex flex-col gap-6">
-            <OnlinePlayers currentUser={user} />
+          {/* RIGHT COLUMN: GLOBAL CHAT - Hidden on mobile, visible on lg+ */}
+          <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
             <GlobalChat currentUser={user} />
+          </div>
+
+          {/* MOBILE ONLY: Show Online Players & Chat in tabs at bottom */}
+          <div className="lg:hidden col-span-12 w-full mt-4">
+            <div className="flex gap-2 mb-3">
+              <button 
+                onClick={() => setMobileSidebarTab('players')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  mobileSidebarTab === 'players'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-800/50 text-slate-400'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 inline mr-1" />
+                Pemain Online
+              </button>
+              <button 
+                onClick={() => setMobileSidebarTab('chat')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  mobileSidebarTab === 'chat'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-800/50 text-slate-400'
+                }`}
+              >
+                <MessageCircle className="w-3.5 h-3.5 inline mr-1" />
+                Global Chat
+              </button>
+            </div>
+            {mobileSidebarTab === 'players' && <OnlinePlayers currentUser={user} />}
+            {mobileSidebarTab === 'chat' && <GlobalChat currentUser={user} />}
           </div>
         </div>
       </main>

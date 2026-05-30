@@ -3,7 +3,7 @@
     {
       "id": "fishing",
       "name": "Fishing Chest",
-      "price": 50,
+      "price": 1000,
       "icon": "🎣",
       "color": "from-cyan-500 to-blue-600",
       "background": "linear-gradient(135deg, #091728 0%, #0d273c 100%)",
@@ -59,7 +59,7 @@
     {
       "id": "farm",
       "name": "Farm Chest",
-      "price": 80,
+      "price": 1000,
       "icon": "🌾",
       "color": "from-[#38bdf8] to-[#0369a1]",
       "background": "linear-gradient(135deg, #04121d 0%, #0f2d45 100%)",
@@ -115,7 +115,7 @@
     {
       "id": "new",
       "name": "Newbie Chest",
-      "price": 120,
+      "price": 500,
       "icon": "⚔️",
       "color": "from-sky-400 to-indigo-600",
       "background": "linear-gradient(135deg, #081123 0%, #0d2346 100%)",
@@ -124,8 +124,8 @@
         {
           "name": "Gaia",
           "rarity": "Rare",
-          "chance": 25,
-          "value": 45,
+          "chance": 2,
+          "value": 2000,
           "icon": "🔱",
           "color": "#a1a1aa",
           "image": "/images/gaia.png"
@@ -133,8 +133,8 @@
         {
           "name": "UT",
           "rarity": "Rare",
-          "chance": 25,
-          "value": 45,
+          "chance":25,
+          "value": 2000,
           "icon": "🎃",
           "color": "#3b82f6",
           "image": "/images/ut.png"
@@ -170,7 +170,7 @@
     },
     {
       "id": "lock",
-      "name": "Locked Chest",
+      "name": "Lock Chest",
       "price": 150,
       "icon": "🔮",
       "color": "from-cyan-400 to-blue-600",
@@ -281,13 +281,13 @@
       ]
     },
     {
-      "id": "treasure",
-      "name": "Treasure Chest",
+      "id": "legendarychest",
+      "name": "Legendary Chest",
       "price": 200,
       "icon": "👑",
       "color": "from-cyan-500 to-sky-600",
       "background": "linear-gradient(135deg, #041423 0%, #0c2a47 100%)",
-      "image": "/images/treasure_chest.png",
+      "image": "/images/legendarycase.png",
       "items": [
         {
           "name": "Verdigris Copper Coin",

@@ -1256,14 +1256,14 @@ async function handleResetConfig(gameType: string, res: any) {
 async function handleOnlineUsers(res: any) {
   // Generate mock online players with realistic activities
   const activities = [
-    'Membuka Golden Chest 🎁',
-    'Bertaruh di Crash Game 🚀',
-    'Memutar Roda Hadiah 🎡',
-    'Idle di Lobby 💬',
-    'Melihat Dashboard 📊',
-    'Membuka Legendary Chest 👑',
-    'Bermain Case Opening 🎰',
-    'Mengelola Jalannya Casino 🛠️'
+    'Membuka Golden Chest',
+    'Bertaruh di Crash Game',
+    'Memutar Roda Hadiah',
+    'Idle di Lobby',
+    'Melihat Dashboard',
+    'Membuka Legendary Chest',
+    'Bermain Case Opening',
+    'Mengelola Jalannya Casino'
   ];
 
   const mockPlayers = [

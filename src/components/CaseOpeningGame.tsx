@@ -379,62 +379,62 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
           <p className="text-red-400 text-sm font-mono">❌ Tidak ada chest tersedia. Hubungi admin.</p>
         </div>
       ) : selectedChestId === null ? (
-        <div className="flex flex-col gap-8 animate-fade-in px-2 max-w-7xl mx-auto w-full">
-          <div className="flex flex-col gap-2 border-b border-white/5 pb-5 text-center sm:text-left">
-            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-yellow-500 font-display uppercase tracking-tight">
+        <div className="flex flex-col gap-8 animate-fade-in px-2 md:px-4 max-w-7xl mx-auto w-full">
+          <div className="flex flex-col gap-2 border-b border-white/5 pb-4 text-center sm:text-left">
+            <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-yellow-500 font-display uppercase tracking-tight">
               PILIH CHEST UNTUK DIBUKA
             </h2>
-            <p className="text-sm text-slate-400 font-sans leading-relaxed">
-              Pilih salah satu dari 9 Kategori Chest premium eksklusif di bawah ini. Semua hadiah di dalam chest sudah menggunakan gambar PNG interaktif dan drop rates murni berbasis algoritma weighted RNG!
+            <p className="text-xs md:text-sm text-slate-400 font-sans leading-relaxed">
+              Pilih salah satu dari 15 Kategori Chest premium eksklusif di bawah ini dengan drop rates murni berbasis algoritma weighted RNG!
             </p>
           </div>
 
           {/* LARGE GRID VIEW ENLARGED: Renders big chest cards with real high-resolution PNG images */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {chests.map((chest) => (
               <div
                 key={chest.id}
                 onClick={() => setSelectedChestId(chest.id)}
-                className="bg-[#141224]/75 hover:bg-[#1c1932]/90 border-2 border-white/10 hover:border-purple-500/75 rounded-[36px] p-8 flex flex-col justify-between cursor-pointer transition-all duration-500 transform hover:-translate-y-3 hover:shadow-[0_20px_55px_rgba(168,85,247,0.3)] group select-none relative overflow-hidden min-h-[500px]"
+                className="bg-gradient-to-br from-[#1a1535]/90 to-[#0f0d1f]/95 hover:from-[#221a3f]/95 hover:to-[#14112a]/95 border-2 border-white/10 hover:border-purple-500/60 rounded-[28px] p-5 md:p-6 flex flex-col justify-between cursor-pointer transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_15px_45px_rgba(168,85,247,0.35)] group select-none relative overflow-hidden min-h-[420px]"
               >
                 {/* Decorative glow background colored according to the chest properties */}
-                <div className={`absolute -right-20 -top-20 w-72 h-72 bg-gradient-to-br ${chest.color} opacity-[0.08] group-hover:opacity-[0.2] rounded-full blur-3xl transition-all duration-500`} />
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-[4px] bg-transparent group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500 rounded-full transition-all duration-300" />
+                <div className={`absolute -right-16 -top-16 w-56 h-56 bg-gradient-to-br ${chest.color} opacity-[0.06] group-hover:opacity-[0.18] rounded-full blur-3xl transition-all duration-500`} />
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-[3px] bg-transparent group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500 rounded-full transition-all duration-300" />
 
                 {/* Upper segment: PNG image (enlarged) & Name */}
-                <div className="w-full flex flex-col items-center gap-6">
-                  <div className="relative w-56 h-56 flex items-center justify-center mt-4">
-                    <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/20 rounded-full blur-3xl transition-all duration-300 scale-100" />
+                <div className="w-full flex flex-col items-center gap-4">
+                  <div className="relative w-44 h-44 md:w-48 md:h-48 flex items-center justify-center mt-2">
+                    <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/15 rounded-full blur-2xl transition-all duration-300 scale-100" />
                     <img 
                       src={chest.image} 
                       alt={chest.name}
-                      className="w-52 h-52 object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.7)] group-hover:scale-112 group-hover:rotate-3 transition-all duration-500 relative z-10" 
+                      className="w-40 h-40 md:w-44 md:h-44 object-contain filter drop-shadow-[0_10px_24px_rgba(0,0,0,0.7)] group-hover:scale-110 group-hover:rotate-2 transition-all duration-500 relative z-10" 
                       referrerPolicy="no-referrer"
                     />
                   </div>
                   
-                  <div className="flex flex-col text-center mt-3">
-                    <h3 className="text-2xl font-black text-slate-100 group-hover:text-purple-300 transition-colors tracking-wide font-display">
+                  <div className="flex flex-col text-center mt-2">
+                    <h3 className="text-xl md:text-2xl font-black text-slate-100 group-hover:text-purple-300 transition-colors tracking-wide font-display">
                       {chest.name}
                     </h3>
-                    <p className="text-sm text-slate-400 font-sans mt-1">
-                      Koleksi Chest Eksklusif Premium
+                    <p className="text-xs text-slate-400 font-sans mt-1">
+                      Chest Premium Eksklusif
                     </p>
                   </div>
                 </div>
 
                 {/* Rates showcase badges */}
-                <div className="w-full grid grid-cols-5 gap-2 mt-6 text-[11px] font-mono font-bold text-center border-t border-b border-white/5 py-4">
-                  <div className="flex flex-col"><span className="text-slate-500 uppercase text-[9px] tracking-wider">Common</span><span className="text-slate-300 mt-1">60%</span></div>
-                  <div className="flex flex-col"><span className="text-blue-500 uppercase text-[9px] tracking-wider">Rare</span><span className="text-blue-400 mt-1">25%</span></div>
-                  <div className="flex flex-col"><span className="text-purple-500 uppercase text-[9px] tracking-wider">Epic</span><span className="text-purple-400 mt-1">10%</span></div>
-                  <div className="flex flex-col"><span className="text-yellow-500 uppercase text-[9px] tracking-wider">Legend</span><span className="text-yellow-400 mt-1">4%</span></div>
-                  <div className="flex flex-col"><span className="text-red-500 uppercase text-[9px] tracking-wider">Mythic</span><span className="text-red-400 mt-1">1%</span></div>
+                <div className="w-full grid grid-cols-5 gap-1.5 mt-4 text-[10px] font-mono font-bold text-center border-t border-b border-white/5 py-3">
+                  <div className="flex flex-col"><span className="text-slate-500 uppercase text-[8px] tracking-wider">Com</span><span className="text-slate-300 mt-0.5">60%</span></div>
+                  <div className="flex flex-col"><span className="text-blue-500 uppercase text-[8px] tracking-wider">Rare</span><span className="text-blue-400 mt-0.5">25%</span></div>
+                  <div className="flex flex-col"><span className="text-purple-500 uppercase text-[8px] tracking-wider">Epic</span><span className="text-purple-400 mt-0.5">10%</span></div>
+                  <div className="flex flex-col"><span className="text-yellow-500 uppercase text-[8px] tracking-wider">Leg</span><span className="text-yellow-400 mt-0.5">4%</span></div>
+                  <div className="flex flex-col"><span className="text-red-500 uppercase text-[8px] tracking-wider">Myth</span><span className="text-red-400 mt-0.5">1%</span></div>
                 </div>
 
                 {/* Open command action badge */}
-                <div className="w-full mt-6 bg-[#0f0e1d] group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-pink-600 text-slate-300 group-hover:text-white border border-white/10 group-hover:border-transparent py-4 rounded-2xl text-center text-sm font-black transition-all duration-300 transform group-hover:scale-[1.02]">
-                  BUKA SEKARANG (FREE OPEN)
+                <div className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white border-0 py-3 md:py-3.5 rounded-xl text-center text-xs md:text-sm font-black transition-all duration-300 transform group-hover:scale-[1.03] shadow-lg shadow-purple-500/30 group-hover:shadow-purple-500/50">
+                  BUKA SEKARANG
                 </div>
 
               </div>
@@ -442,10 +442,10 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
           </div>
 
           {/* Quick instructions / Info block */}
-          <div className="bg-[#141224]/30 border border-white/10 p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4 mt-2 text-xs font-sans text-slate-400 shadow-xl">
-            <Info className="w-6 h-6 text-purple-400 shrink-0" />
+          <div className="bg-[#141224]/30 border border-white/10 p-4 md:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 mt-2 text-[10px] md:text-xs font-sans text-slate-400 shadow-xl">
+            <Info className="w-5 h-5 md:w-6 md:h-6 text-purple-400 shrink-0" />
             <div>
-              <span className="text-slate-200 font-bold block mb-0.5">Informasi Drop Rates & Keadilan RNG:</span> Chest Opening Game bertipe simulasi. Setiap chest berisi item-item unik yang diurutkan berdasarkan kelangkaan. Anda dapat membuka semua chest secara bebas secara tidak terbatas dengan unboxing simulator ini!
+              <span className="text-slate-200 font-bold block mb-0.5">Informasi Drop Rates & Keadilan RNG:</span> Chest Opening Game bertipe simulasi. Setiap chest berisi item-item unik yang diurutkan berdasarkan kelangkaan. Anda dapat membuka semua chest secara bebas!
             </div>
           </div>
         </div>

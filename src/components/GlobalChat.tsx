@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../utils/api';
-import { MessageCircle, Send, Trash2, Ban, Shield, Radio, AlertCircle } from 'lucide-react';
+import { MessageCircle, Send, Trash2, Ban, Shield, Radio, AlertCircle, Crown, Star, User as UserIcon } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -27,15 +27,28 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Auto-scroll to bottom when new messages arrive
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
+  const scrollToBottom = (force = false) => {
+    const container = messagesEndRef.current?.parentElement;
+    if (container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      if (force || isNearBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only auto-scroll if messages actually changed and not initial load
+    if (messages.length > 0 && !isInitialLoad) {
+      scrollToBottom();
+    }
+    if (isInitialLoad && messages.length > 0) {
+      setIsInitialLoad(false);
+    }
+  }, [messages.length]);
 
   // Fetch messages from API
   const fetchMessages = async () => {
@@ -100,7 +113,7 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
       }
       
       setInputMessage('');
-      scrollToBottom();
+      scrollToBottom(true); // Force scroll after sending message
     } catch (err: any) {
       setError(err.message || 'Gagal mengirim pesan');
     } finally {
@@ -117,23 +130,30 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
     });
   };
 
-  // Get role badge
+  // Get role badge with icon
   const getRoleBadge = (is_staff: boolean, username: string) => {
     if (username === 'nanddev') {
       return (
-        <span className="text-[7px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-mono font-black border border-red-500/30">
+        <span className="flex items-center gap-1 text-[7px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded font-mono font-black border border-red-500/30">
+          <Crown className="w-2.5 h-2.5" />
           OWNER
         </span>
       );
     }
     if (is_staff) {
       return (
-        <span className="text-[7px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-mono font-black border border-yellow-500/30">
+        <span className="flex items-center gap-1 text-[7px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-mono font-black border border-yellow-500/30">
+          <Shield className="w-2.5 h-2.5" />
           STAFF
         </span>
       );
     }
-    return null;
+    return (
+      <span className="flex items-center gap-1 text-[7px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-mono font-black border border-blue-500/30">
+        <UserIcon className="w-2.5 h-2.5" />
+        PLAYER
+      </span>
+    );
   };
 
   // Get username color
@@ -144,40 +164,40 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
   };
 
   return (
-    <div className="glass-panel-dark rounded-[24px] border border-cyan-500/20 p-5 shadow-2.5xl relative overflow-hidden backdrop-blur-md flex flex-col h-full max-h-[600px]">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+    <div className="glass-panel-dark rounded-[20px] border border-cyan-500/20 p-3 md:p-4 shadow-2xl relative overflow-hidden backdrop-blur-md flex flex-col h-full max-h-[500px]">
+      <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
       
       {/* Chat Header */}
-      <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+      <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <MessageCircle className="w-5 h-5 text-cyan-400" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950 animate-pulse" />
+            <MessageCircle className="w-4 h-4 text-cyan-400" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-slate-950 animate-pulse" />
           </div>
           <div>
-            <h3 className="text-sm font-display font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+            <h3 className="text-xs font-display font-black text-white uppercase tracking-wider flex items-center gap-1.5">
               Global Chat
-              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 animate-pulse">
-                <Radio className="w-2.5 h-2.5" /> LIVE
+              <span className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 animate-pulse">
+                <Radio className="w-2 h-2" /> LIVE
               </span>
             </h3>
-            <p className="text-[10px] text-slate-400 font-mono">
-              {messages.length} pesan • Chat publik
+            <p className="text-[9px] text-slate-400 font-mono">
+              {messages.length} pesan
             </p>
           </div>
         </div>
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-4 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 mb-3 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2 text-slate-500 font-mono text-xs">
-            <MessageCircle className="w-5 h-5 animate-pulse text-cyan-400" />
+          <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-500 font-mono text-[10px]">
+            <MessageCircle className="w-4 h-4 animate-pulse text-cyan-400" />
             <span>Memuat chat...</span>
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-slate-500 py-10 font-mono text-xs">
-            Belum ada pesan. Mulai percakapan!
+          <div className="text-center text-slate-500 py-8 font-mono text-[10px]">
+            Belum ada pesan
           </div>
         ) : (
           messages.map((msg) => {
@@ -187,22 +207,22 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
             return (
               <div 
                 key={msg.id} 
-                className={`flex flex-col gap-1 ${isOwn ? 'items-end' : 'items-start'}`}
+                className={`flex flex-col gap-0.5 ${isOwn ? 'items-end' : 'items-start'}`}
               >
                 {/* Username and badge */}
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-xs font-black ${getUsernameColor(msg.is_staff, msg.username)}`}>
+                <div className="flex items-center gap-1">
+                  <span className={`text-[10px] font-black ${getUsernameColor(msg.is_staff, msg.username)}`}>
                     {msg.username}
                   </span>
                   {getRoleBadge(msg.is_staff, msg.username)}
-                  <span className="text-[9px] text-slate-500 font-mono">
+                  <span className="text-[8px] text-slate-500 font-mono">
                     {formatTime(msg.timestamp)}
                   </span>
                 </div>
                 
                 {/* Message bubble */}
                 <div 
-                  className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
+                  className={`max-w-[90%] px-2.5 py-1.5 rounded-lg text-[10px] leading-relaxed ${
                     isOwn 
                       ? 'bg-cyan-600/20 border border-cyan-500/30 text-cyan-100'
                       : isNanddev
@@ -223,36 +243,35 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
 
       {/* Error message */}
       {error && (
-        <div className="mb-3 py-2 px-3 bg-red-950/40 border border-red-500/30 text-xs text-red-400 rounded-lg flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        <div className="mb-2 py-1.5 px-2.5 bg-red-950/40 border border-red-500/30 text-[10px] text-red-400 rounded-lg flex items-center gap-1.5">
+          <AlertCircle className="w-3 h-3 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Input Form */}
-      <form onSubmit={handleSendMessage} className="flex gap-2">
+      <form onSubmit={handleSendMessage} className="flex gap-1.5">
         <input
           type="text"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
-          placeholder="Ketik pesan... (max 200 karakter)"
+          placeholder="Ketik pesan..."
           maxLength={200}
           disabled={sending}
-          className="flex-1 bg-black/40 border border-white/10 rounded-xl py-2.5 px-4 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors disabled:opacity-50"
+          className="flex-1 bg-black/40 border border-white/10 rounded-lg py-2 px-3 text-[10px] text-white placeholder-slate-500 outline-none focus:border-cyan-500/50 transition-colors disabled:opacity-50"
         />
         <button
           type="submit"
           disabled={sending || !inputMessage.trim()}
-          className="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition-all flex items-center gap-2 text-xs font-bold disabled:cursor-not-allowed"
+          className="px-3 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-lg transition-all flex items-center gap-1 text-[10px] font-bold disabled:cursor-not-allowed"
         >
-          <Send className="w-3.5 h-3.5" />
-          {sending ? 'Kirim...' : 'Kirim'}
+          <Send className="w-3 h-3" />
         </button>
       </form>
 
       {/* Character counter */}
-      <div className="mt-2 text-right">
-        <span className={`text-[9px] font-mono ${
+      <div className="mt-1.5 text-right">
+        <span className={`text-[8px] font-mono ${
           inputMessage.length > 180 ? 'text-red-400' : 'text-slate-500'
         }`}>
           {inputMessage.length}/200
