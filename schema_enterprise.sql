@@ -194,7 +194,7 @@ INSERT INTO public.site_content (content_key, content_value, content_type) VALUE
 ('hero_title', 'Selamat Datang di ReyaBet Casino', 'text'),
 ('hero_subtitle', 'Mainkan game seru dan menangkan hadiah menarik!', 'text'),
 ('footer_text', 'WHEEL SPINNER CASINO © 2026 • Private Premium Client Build', 'text'),
-('discord_link', 'https://discord.gg/reyabet', 'url'),
+('discord_link', 'https://discord.gg/ZHF2N94p5', 'url'),
 ('deposit_message', 'Silakan hubungi staff admin untuk melakukan top-up deposit saldo agar bisa bermain.', 'text'),
 ('logo_url', '/logo.png', 'url'),
 ('welcome_message', 'Selamat datang di ReyaBet! Mainkan game seru dan menangkan hadiah.', 'text')

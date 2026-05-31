@@ -726,23 +726,29 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
       const winPayout = parseFloat((bet * target).toFixed(2));
       const profit = parseFloat((winPayout - bet).toFixed(2)); // Net profit (winnings minus original bet)
 
-      // Crash Game: Only give balance (Lock or WL), no item prizes
-      // The winPayout is added directly to user balance
-      API.addWinningItem({
-        name: 'Crash Game Winnings 💰',
-        rarity: 'Legendary',
-        value: winPayout,
-        icon: '💰',
-        image: '/images/prize_space.png',
-        addedBalance: winPayout // Add full winnings (bet × multiplier) - NO ITEM PRIZE
+      // Crash Game: HANYA TAMBAH BALANCE, TIDAK ADA ITEM
+      // Kirim request ke server untuk menambahkan balance
+      fetch('/api/crash/win', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ 
+          winAmount: winPayout,
+          betAmount: bet,
+          multiplier: target
+        })
       })
+        .then(res => res.json())
         .then(() => {
-          refreshUser(); // Sync user data
-          // No item notification for crash game - only balance update
+          refreshUser(); // Update balance di UI
           updateLeaderboard(profit);
         })
         .catch((err) => {
-          console.error('Gagal memproses hadiah kemenangan Crash:', err);
+          console.error('Gagal memproses kemenangan Crash:', err);
+          // Fallback: tetap refresh user untuk sync balance
+          refreshUser();
         });
     } else {
       setGameState('crashed');
@@ -811,25 +817,25 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
   return (
     <div className="w-full flex flex-col gap-6" id="crash-game-view">
       {/* 10 Last Rounds History Horizontal chip bar */}
-      <div className="flex items-center gap-2 overflow-x-auto py-1 px-4 bg-[#141224]/50 backdrop-blur-md border border-white/5 rounded-xl scrollbar-hide select-none">
-        <span className="text-[10px] font-mono tracking-widest text-[#94a3b8] font-bold uppercase shrink-0">HISTORY:</span>
+      <div className="flex items-center gap-3 overflow-x-auto py-3 px-5 bg-gradient-to-r from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-xl border-2 border-cyan-500/20 rounded-xl scrollbar-hide select-none shadow-lg shadow-cyan-500/10">
+        <span className="text-xs font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 uppercase shrink-0">HISTORY:</span>
         {history.length === 0 ? (
-          <span className="text-[10px] font-sans text-slate-500 italic py-1">Belum ada putaran dilakukan.</span>
+          <span className="text-xs text-slate-400 italic py-1">Belum ada putaran dilakukan.</span>
         ) : (
           history.map((h) => {
             const isWon = h.outcome === 'WIN';
             return (
               <div 
                 key={h.id} 
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono shrink-0 transition-transform hover:scale-105 border ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shrink-0 transition-all hover:scale-105 border-2 shadow-lg ${
                   isWon 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+                    ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border-emerald-400/40 text-emerald-300 shadow-emerald-500/20' 
+                    : 'bg-gradient-to-r from-red-500/20 to-red-600/10 border-red-400/40 text-red-300 shadow-red-500/20'
                 }`}
               >
-                <span>{h.crashPoint.toFixed(2)}x</span>
+                <span className="font-black">{h.crashPoint.toFixed(2)}x</span>
                 {h.profit !== 0 && (
-                  <span className="text-[10px] font-normal opacity-75">
+                  <span className="text-xs font-semibold opacity-90">
                     ({h.profit > 0 ? '+' : ''}{h.profit})
                   </span>
                 )}
@@ -845,7 +851,7 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
         <div className="lg:col-span-8 flex flex-col gap-4">
           <div 
             ref={containerRef}
-            className="w-full relative bg-[#121121]/50 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden shadow-2xl p-2 select-none"
+            className="w-full relative bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-2xl border-2 border-cyan-500/20 overflow-hidden shadow-2xl shadow-cyan-500/10 p-3"
           >
             {/* Countdown Screen Overlay */}
             {gameState === 'countdown' && (
@@ -954,40 +960,40 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
         <div className="lg:col-span-4 flex flex-col gap-5">
           
           {wonItemNotification && (
-            <div className="bg-emerald-950/50 backdrop-blur-md border border-emerald-500/30 p-4 rounded-2xl flex items-center justify-between gap-4 animate-fade-in select-none">
+            <div className="bg-gradient-to-br from-emerald-500/10 via-emerald-600/5 to-transparent backdrop-blur-xl border border-emerald-400/30 p-4 rounded-2xl flex items-center justify-between gap-4 animate-fade-in select-none shadow-lg shadow-emerald-500/10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-black/60 rounded-xl p-1.5 flex items-center justify-center border border-emerald-500/30 shrink-0">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl p-1.5 flex items-center justify-center border border-emerald-400/40 shrink-0 shadow-inner">
                   <img src={wonItemNotification.image} alt={wonItemNotification.name} className="object-contain w-full h-full" referrerPolicy="no-referrer" />
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-mono font-black tracking-wider text-emerald-400 flex items-center gap-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 flex items-center gap-1">
                     <Trophy className="w-3 h-3" /> MENANG ITEM!
                   </span>
-                  <p className="text-xs font-black text-slate-100">{wonItemNotification.name}</p>
+                  <p className="text-sm font-black text-white">{wonItemNotification.name}</p>
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <span className="text-[10px] text-emerald-400 font-bold block bg-emerald-500/10 border border-emerald-500/20 py-0.5 px-2 rounded-full">+Inventory</span>
+                <span className="text-[10px] text-emerald-400 font-bold block bg-emerald-500/20 border border-emerald-400/30 py-1 px-3 rounded-full">+Inventory</span>
               </div>
             </div>
           )}
 
           {/* Main Predict Controller widget */}
-          <div className="bg-[#141224]/50 backdrop-blur-md border border-white/10 p-5 rounded-2xl flex flex-col gap-4 shadow-xl">
+          <div className="bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-900/90 backdrop-blur-xl border border-cyan-500/20 p-6 rounded-2xl flex flex-col gap-5 shadow-2xl shadow-cyan-500/10">
             
             {/* Header with Title and balance */}
-            <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
-              <span className="text-xs font-bold text-[#c084fc] font-mono tracking-wider uppercase flex items-center gap-1">
-                <PngEmoji src="/images/emoji_target.png" alt="🎯" className="w-3.5 h-3.5" /> TARUHAN & MULTIPLIER
+            <div className="flex flex-col gap-2 border-b border-cyan-500/20 pb-4">
+              <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 tracking-wider uppercase flex items-center gap-2">
+                <PngEmoji src="/images/emoji_target.png" alt="🎯" className="w-5 h-5" /> TARUHAN & MULTIPLIER
               </span>
-              <p className="text-[11px] text-slate-400">Atur taruhan Anda dan multiplier target. Jika roket mendarat di atas target, Anda menang jackpot!</p>
+              <p className="text-xs text-slate-300 leading-relaxed">Atur taruhan Anda dan multiplier target. Jika roket mendarat di atas target, Anda menang jackpot!</p>
             </div>
 
             {/* Betting Input Section */}
-            <div className="flex flex-col gap-2.5 bg-[#0d0c15] p-3 border border-white/5 rounded-xl">
+            <div className="flex flex-col gap-3 bg-gradient-to-br from-slate-950/80 to-slate-900/60 p-4 border border-cyan-500/10 rounded-xl backdrop-blur-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-200 font-sans">Jumlah Taruhan</span>
-                <span className="text-[10px] font-mono font-bold text-yellow-500">World Locks (wl)</span>
+                <span className="text-sm font-bold text-white">Jumlah Taruhan</span>
+                <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded-full border border-cyan-500/20">World Locks</span>
               </div>
               <input
                 type="number"
@@ -996,14 +1002,15 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
                 disabled={gameState !== 'idle'}
                 value={betInput}
                 onChange={(e) => setBetInput(e.target.value)}
-                className="w-full bg-[#161427] border border-white/10 rounded-lg py-2 px-3 font-mono text-sm text-slate-200 font-bold focus:outline-none focus:border-purple-500/50"
+                className="w-full bg-slate-950/80 border-2 border-cyan-500/30 rounded-xl py-3 px-4 font-mono text-base text-white font-bold focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 transition-all placeholder-slate-500"
+                placeholder="Masukkan jumlah taruhan"
               />
-              <div className="grid grid-cols-4 gap-1.5 select-none">
+              <div className="grid grid-cols-4 gap-2 select-none">
                 <button
                   type="button"
                   disabled={gameState !== 'idle'}
                   onClick={() => setBetInput('100')}
-                  className="py-1 rounded text-[9px] font-mono bg-[#1c1932]/70 border border-white/5 text-slate-300 hover:text-white"
+                  className="py-2 rounded-lg text-xs font-bold bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white hover:from-cyan-600 hover:to-cyan-700 hover:border-cyan-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Min
                 </button>
@@ -1014,7 +1021,7 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
                     const val = Math.max(10, Math.floor(parseFloat(betInput) / 2));
                     setBetInput(val.toString());
                   }}
-                  className="py-1 rounded text-[9px] font-mono bg-[#1c1932]/70 border border-white/5 text-slate-300 hover:text-white"
+                  className="py-2 rounded-lg text-xs font-bold bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white hover:from-cyan-600 hover:to-cyan-700 hover:border-cyan-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   1/2
                 </button>
@@ -1025,7 +1032,7 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
                     const val = parseFloat(betInput) * 2;
                     setBetInput(val.toString());
                   }}
-                  className="py-1 rounded text-[9px] font-mono bg-[#1c1932]/70 border border-white/5 text-slate-300 hover:text-white"
+                  className="py-2 rounded-lg text-xs font-bold bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white hover:from-cyan-600 hover:to-cyan-700 hover:border-cyan-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   2x
                 </button>
@@ -1036,7 +1043,7 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
                     const val = Math.floor(parseFloat(user.balance));
                     setBetInput(val.toString());
                   }}
-                  className="py-1 rounded text-[9px] font-mono bg-[#1c1932]/70 border border-white/5 text-slate-300 hover:text-white"
+                  className="py-2 rounded-lg text-xs font-bold bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 text-white hover:from-cyan-600 hover:to-cyan-700 hover:border-cyan-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Max
                 </button>
@@ -1044,10 +1051,10 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
             </div>
 
             {/* Target Multiplier Configuration */}
-            <div className="flex flex-col gap-3 bg-[#0d0c15] p-3 border border-white/5 rounded-xl">
+            <div className="flex flex-col gap-3 bg-gradient-to-br from-amber-950/30 to-orange-950/20 p-4 border border-amber-500/20 rounded-xl backdrop-blur-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-200 font-sans">Target Multiplier</span>
-                <span className="text-[10px] font-mono font-bold text-amber-500">Pick Mode</span>
+                <span className="text-sm font-bold text-white">Target Multiplier</span>
+                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full border border-amber-500/20">Pick Mode</span>
               </div>
               <input
                 type="number"
@@ -1057,22 +1064,23 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
                 disabled={gameState !== 'idle'}
                 value={pickMultiplier}
                 onChange={(e) => setPickMultiplier(e.target.value)}
-                className="w-full bg-[#161427] border border-white/10 rounded-lg py-2.5 px-3.5 font-mono text-sm text-amber-400 font-bold focus:outline-none focus:border-amber-500/50"
+                className="w-full bg-slate-950/80 border-2 border-amber-500/30 rounded-xl py-3 px-4 font-mono text-base text-amber-400 font-bold focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20 transition-all placeholder-amber-600/50"
+                placeholder="Target multiplier"
               />
 
               {/* Preset shortcuts */}
-              <div className="grid grid-cols-5 gap-1 select-none">
+              <div className="grid grid-cols-5 gap-1.5 select-none">
                 {['1.40', '1.60', '2.00', '3.50', '5.00'].map((val) => (
                   <button
                     key={val}
                     type="button"
                     disabled={gameState !== 'idle'}
                     onClick={() => setPickMultiplier(val)}
-                    className={`py-1.5 rounded text-[10px] font-mono font-bold border transition cursor-pointer ${
+                    className={`py-2 rounded-lg text-xs font-bold border transition-all active:scale-95 ${
                       pickMultiplier === val 
-                        ? 'bg-amber-500/20 border-amber-500 text-amber-300' 
-                        : 'bg-[#1b1932]/70 border-white/5 text-slate-300 hover:text-white'
-                    }`}
+                        ? 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-400 text-white shadow-lg shadow-amber-500/30' 
+                        : 'bg-gradient-to-br from-slate-700 to-slate-800 border-slate-600 text-slate-300 hover:from-amber-600 hover:to-orange-600 hover:border-amber-500 hover:text-white'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {val}x
                   </button>
@@ -1081,9 +1089,9 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
             </div>
 
             {crashError && (
-              <div className="py-2.5 px-4 bg-red-950/40 border border-red-500/20 text-xs text-red-400 rounded-xl font-medium animate-shake flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-red-500 shrink-0" />
-                <span>{crashError}</span>
+              <div className="py-3 px-4 bg-gradient-to-br from-red-950/60 to-red-900/40 border border-red-500/30 text-sm text-red-300 rounded-xl font-medium animate-shake flex items-center gap-2 backdrop-blur-sm shadow-lg shadow-red-500/10">
+                <ShieldAlert className="w-5 h-5 text-red-400 shrink-0" />
+                <span className="font-semibold">{crashError}</span>
               </div>
             )}
 
@@ -1091,21 +1099,22 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
             {gameState === 'idle' ? (
               <button
                 onClick={handlePlayGame}
-                className="w-full py-3 px-4 bg-[#7c5cfc] hover:bg-[#8d71ff] text-white rounded-xl font-sans font-bold text-sm tracking-wide select-none cursor-pointer border border-[#8d71ff]/40 shadow-[0_0_20px_rgba(124,92,252,0.3)] transition flex items-center justify-center gap-1.5 mt-2"
+                className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 hover:from-cyan-400 hover:via-blue-400 hover:to-purple-400 text-white rounded-xl font-black text-base tracking-wide select-none cursor-pointer border-2 border-cyan-400/50 shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:shadow-[0_0_40px_rgba(6,182,212,0.6)] transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
               >
-                <PngEmoji src="/images/emoji_rocket.png" alt="🚀" className="w-4 h-4" /> MULAI GAME
+                <PngEmoji src="/images/emoji_rocket.png" alt="🚀" className="w-5 h-5" /> 
+                <span>MULAI GAME</span>
               </button>
             ) : gameState === 'playing' ? (
               <button
                 disabled
-                className="w-full py-3 px-4 bg-slate-800 text-slate-400 rounded-xl font-sans font-bold text-sm select-none cursor-not-allowed border border-white/5 mt-2"
+                className="w-full py-4 px-6 bg-gradient-to-br from-slate-700 to-slate-800 text-slate-300 rounded-xl font-bold text-base select-none cursor-not-allowed border-2 border-slate-600 mt-2 opacity-70"
               >
                 Menunggu Hasil... ({currentMultiplier.toFixed(2)}x)
               </button>
             ) : (
               <button
                 disabled
-                className="w-full py-3 px-4 bg-slate-800 text-slate-500 rounded-xl font-sans font-bold text-sm select-none cursor-not-allowed border border-white/5 mt-2"
+                className="w-full py-4 px-6 bg-gradient-to-br from-slate-700 to-slate-800 text-slate-400 rounded-xl font-bold text-base select-none cursor-not-allowed border-2 border-slate-600 mt-2 opacity-70"
               >
                 Menyiapkan Arena...
               </button>

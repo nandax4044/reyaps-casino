@@ -36,7 +36,7 @@ GRANT ALL ON public.withdrawal_logs TO anon, authenticated;
 INSERT INTO public.site_content (content_key, content_value, content_type) VALUES
 ('discord_webhook_url', 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN', 'url'),
 ('discord_staff_channel_id', '1234567890', 'text'),
-('discord_invite_link', 'https://discord.gg/dewagacor-staff', 'url')
+('discord_invite_link', 'https://discord.gg/ZHF2N94p5', 'url')
 ON CONFLICT (content_key) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════════════

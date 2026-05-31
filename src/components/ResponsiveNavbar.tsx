@@ -6,11 +6,17 @@ interface ResponsiveNavbarProps {
   activeGame: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin';
   onNavigate: (game: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin') => void;
   onLogout: () => void;
+  gamesPublished?: {
+    wheel?: boolean;
+    crash?: boolean;
+    cases?: boolean;
+  };
 }
 
-export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout }: ResponsiveNavbarProps) {
+export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, gamesPublished }: ResponsiveNavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [maintenanceNotif, setMaintenanceNotif] = useState<string | null>(null);
 
   // Handle scroll to change navbar background
   useEffect(() => {
@@ -24,6 +30,26 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout }: Res
 
   // Close menu when navigating
   const handleNavClick = (game: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin') => {
+    // Check if game is published
+    if (game === 'wheel' && gamesPublished?.wheel === false) {
+      setMaintenanceNotif('Roda Hadiah sedang dalam perbaikan. Silakan coba lagi nanti.');
+      setTimeout(() => setMaintenanceNotif(null), 3000);
+      setIsMenuOpen(false);
+      return;
+    }
+    if (game === 'crash' && gamesPublished?.crash === false) {
+      setMaintenanceNotif('Crash Game sedang dalam perbaikan. Silakan coba lagi nanti.');
+      setTimeout(() => setMaintenanceNotif(null), 3000);
+      setIsMenuOpen(false);
+      return;
+    }
+    if (game === 'cases' && gamesPublished?.cases === false) {
+      setMaintenanceNotif('Case Opening sedang dalam perbaikan. Silakan coba lagi nanti.');
+      setTimeout(() => setMaintenanceNotif(null), 3000);
+      setIsMenuOpen(false);
+      return;
+    }
+
     onNavigate(game);
     setIsMenuOpen(false);
   };
@@ -41,6 +67,20 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout }: Res
 
   return (
     <>
+      {/* MAINTENANCE NOTIFICATION */}
+      {maintenanceNotif && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] animate-fade-in">
+          <div className="bg-red-500/95 backdrop-blur-md border border-red-400/50 rounded-xl px-6 py-3 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🔧</div>
+              <div>
+                <p className="text-white font-bold text-sm">{maintenanceNotif}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* NAVBAR */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${

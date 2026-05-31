@@ -526,6 +526,54 @@ app.post('/api/user/add-win', authenticateUser, async (req, res) => {
   }
 });
 
+// ─── CRASH GAME WIN (Balance Only - No Items) ─────────────────────────────────
+app.post('/api/crash/win', authenticateUser, async (req, res) => {
+  const { winAmount, betAmount, multiplier } = req.body;
+  const userId = req.body._userId;
+  const user   = req.body._user;
+
+  if (!winAmount || winAmount <= 0) {
+    return res.status(400).json({ error: 'Invalid win amount' });
+  }
+
+  const currentBalance = parseFloat(user.balance);
+  const newBalance = currentBalance + winAmount;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data: updatedUser, error } = await supabase
+        .from('users')
+        .update({ balance: newBalance })
+        .eq('id', userId)
+        .select('balance')
+        .single();
+
+      if (error) throw error;
+
+      console.log(`[CRASH WIN] User ${userId} won ${winAmount} WL (bet: ${betAmount}, multiplier: ${multiplier}x)`);
+      
+      res.json({ 
+        success: true, 
+        balance: updatedUser.balance,
+        newBalance: updatedUser.balance,
+        winAmount: winAmount
+      });
+    } catch (e: any) {
+      console.error('[CRASH WIN ERROR]', e);
+      res.status(500).json({ error: e.message });
+    }
+  } else {
+    const userInDb = localDb.users.find(u => u.id === userId);
+    if (userInDb) {
+      userInDb.balance = newBalance;
+      console.log(`[CRASH WIN] User ${userId} won ${winAmount} WL (bet: ${betAmount}, multiplier: ${multiplier}x)`);
+      res.json({ success: true, balance: newBalance, newBalance: newBalance, winAmount: winAmount });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  }
+});
+
 // ─── GAME CONFIGS ──────────────────────────────────────────────────────────────
 app.get('/api/games/config/:game_type', async (req, res) => {
   const { game_type } = req.params;

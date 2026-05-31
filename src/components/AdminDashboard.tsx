@@ -796,13 +796,55 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <span className="text-[9px] text-slate-500 uppercase font-mono font-bold">Asset Link / File</span>
-                              <input
-                                type="text"
-                                value={prize.image}
-                                onChange={(e) => handleUpdateWheelPrizeValue('image', e.target.value, idx)}
-                                className="bg-black/40 border border-white/5 rounded px-2.5 py-1 text-xs text-slate-400 outline-none"
-                              />
+                              <span className="text-[9px] text-slate-500 uppercase font-mono font-bold">Asset Link / Upload File</span>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={prize.image}
+                                  onChange={(e) => handleUpdateWheelPrizeValue('image', e.target.value, idx)}
+                                  placeholder="/images/wheel_item.png"
+                                  className="flex-1 bg-black/40 border border-white/5 rounded px-2.5 py-1 text-xs text-slate-400 outline-none"
+                                />
+                                <label className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold cursor-pointer transition flex items-center gap-1">
+                                  <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    onChange={async (e) => {
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      
+                                      // Check file size (max 2MB)
+                                      if (file.size > 2 * 1024 * 1024) {
+                                        alert('File terlalu besar! Maksimal 2MB');
+                                        return;
+                                      }
+                                      
+                                      // Convert to base64 or upload to server
+                                      const reader = new FileReader();
+                                      reader.onload = (event) => {
+                                        const base64 = event.target?.result as string;
+                                        handleUpdateWheelPrizeValue('image', base64, idx);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }}
+                                    className="hidden"
+                                  />
+                                  📁 Upload
+                                </label>
+                              </div>
+                              {prize.image && (
+                                <div className="mt-1 p-2 bg-black/20 border border-white/5 rounded flex items-center gap-2">
+                                  <img 
+                                    src={prize.image} 
+                                    alt="Preview" 
+                                    className="w-12 h-12 object-contain bg-white/5 rounded border border-white/10"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  <span className="text-[9px] text-slate-500 truncate flex-1">{prize.image.substring(0, 50)}...</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

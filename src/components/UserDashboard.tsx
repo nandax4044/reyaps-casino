@@ -37,7 +37,7 @@ export function UserDashboard({ user, onLogout, onCloseDashboard }: UserDashboar
   const [loadingInv, setLoadingInv] = useState(false);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
-  const [discordInviteLink, setDiscordInviteLink] = useState('https://discord.gg/dewagacor-staff'); // Editable/Customisable JSON target or custom string value
+  const [discordInviteLink, setDiscordInviteLink] = useState('https://discord.gg/ZHF2N94p5'); // Editable/Customisable JSON target or custom string value
 
   const fetchUserData = async () => {
     try {
@@ -151,7 +151,7 @@ export function UserDashboard({ user, onLogout, onCloseDashboard }: UserDashboar
           <div>
             <h4 className="font-display font-bold text-sm text-cyan-200 uppercase tracking-wide">PENGISIAN SALDO (DEPOSIT)</h4>
             <p className="text-xs text-slate-300 font-sans mt-1 leading-relaxed">
-              Silakan hubungi staff admin untuk melakukan top-up deposit saldo agar bisa bermain.
+              klik BUTTON HUBUNGI STAF lalu anda akan ke discord dan hubungi admin untuk mengisi, lalu anda akan diberikan name world untuk deposit, silakan deposit dengan lock, lalu ss dan berikan bukti ke admin.
             </p>
           </div>
           
@@ -179,7 +179,7 @@ export function UserDashboard({ user, onLogout, onCloseDashboard }: UserDashboar
                 <FolderLock className="w-5 h-5 text-cyan-400" />
                 DASHBOARD INVENTORY
               </h3>
-              <p className="text-xs text-slate-400 font-sans mt-0.5">Semua item hadiah yang Anda menangkan tersimpan aman di database database Supabase.</p>
+              <p className="text-xs text-slate-400 font-sans mt-0.5">buka discord dan ss inventory kamu dan berikan ke staff lalu staff aku memberikan item ke dalam game.</p>
             </div>
             
             <button
@@ -218,74 +218,100 @@ export function UserDashboard({ user, onLogout, onCloseDashboard }: UserDashboar
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[420px] overflow-y-auto pr-1">
-              {inventory.map((item) => (
-                <div 
-                  key={item.id}
-                  className="bg-[#0b0f19]/60 border border-white/5 rounded-xl p-3 flex flex-col justify-between transition-all duration-200 hover:border-cyan-500/20 hover:shadow-[0_4px_20px_rgba(3,105,161,0.15)] group"
-                >
-                  <div>
-                    {/* Item Image Banner */}
-                    <div className="w-full aspect-square bg-[#030712] rounded-lg p-1.5 mb-2 border border-white/5 flex items-center justify-center overflow-hidden relative shadow-inner">
-                      {item.image ? (
-                        <img 
-                          src={item.image} 
-                          alt={item.item_name} 
-                          className="object-contain w-full h-full transform group-hover:scale-110 transition duration-300"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : null}
-                      <span className="text-3xl object-contain align-middle absolute text-center select-none filter drop-shadow-md">{item.icon || '🎁'}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[420px] overflow-y-auto pr-1">
+              {(() => {
+                // Group items by name
+                const groupedItems = inventory.reduce((acc: any[], item) => {
+                  const existing = acc.find(i => i.item_name === item.item_name && i.status === item.status);
+                  if (existing) {
+                    existing.count = (existing.count || 1) + 1;
+                    existing.ids = [...(existing.ids || [existing.id]), item.id];
+                    existing.totalValue = (existing.totalValue || existing.value) + item.value;
+                  } else {
+                    acc.push({ 
+                      ...item, 
+                      count: 1, 
+                      ids: [item.id],
+                      totalValue: item.value
+                    });
+                  }
+                  return acc;
+                }, []);
+
+                return groupedItems.map((item) => (
+                  <div 
+                    key={item.ids[0]}
+                    className="bg-[#0b0f19]/60 border border-white/5 rounded-xl p-2.5 flex flex-col justify-between transition-all duration-200 hover:border-cyan-500/20 hover:shadow-[0_4px_20px_rgba(3,105,161,0.15)] group relative"
+                  >
+                    {/* Count Badge */}
+                    {item.count > 1 && (
+                      <div className="absolute top-1.5 right-1.5 bg-cyan-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 shadow-lg">
+                        {item.count}x
+                      </div>
+                    )}
+
+                    <div>
+                      {/* Item Image Banner - Smaller Size */}
+                      <div className="w-full aspect-square bg-[#030712] rounded-lg p-1 mb-1.5 border border-white/5 flex items-center justify-center overflow-hidden relative shadow-inner">
+                        {item.image ? (
+                          <img 
+                            src={item.image} 
+                            alt={item.item_name} 
+                            className="object-contain w-full h-full transform group-hover:scale-110 transition duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-2xl select-none filter drop-shadow-md">🎁</div>
+                        )}
+                      </div>
+
+                      {/* Rarity */}
+                      <span className={`inline-block text-[7px] font-mono tracking-widest font-extrabold uppercase py-0.5 px-1.5 rounded-full border mb-1 ${RARITY_BADGE[item.rarity] || RARITY_BADGE.Common}`}>
+                        {item.rarity}
+                      </span>
+
+                      {/* Name */}
+                      <h4 className="font-sans font-bold text-[11px] text-slate-200 leading-tight line-clamp-2 mb-1">
+                        {item.item_name}
+                      </h4>
+
+                      {/* Value */}
+                      <p className="text-[9px] text-cyan-400/80 font-mono font-semibold">
+                        {item.count > 1 ? `${item.totalValue} CC (${item.count}x)` : `${item.value} CC`}
+                      </p>
                     </div>
 
-                    {/* Rarity */}
-                    <span className={`inline-block text-[8px] font-mono tracking-widest font-extrabold uppercase py-0.5 px-2 rounded-full border mb-1.5 ${RARITY_BADGE[item.rarity] || RARITY_BADGE.Common}`}>
-                      {item.rarity}
-                    </span>
-
-                    {/* Name */}
-                    <h4 className="font-sans font-bold text-xs text-slate-200 leading-snug line-clamp-2">
-                      {item.item_name}
-                    </h4>
-
-                    {/* Value */}
-                    <p className="text-[10px] text-cyan-400/80 font-mono mt-1 font-semibold">
-                      Value: {item.value} CC
-                    </p>
+                    {/* Actions */}
+                    <div className="mt-2">
+                      {item.status === 'requested_withdraw' ? (
+                        <div className="w-full py-1 px-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center flex items-center justify-center gap-1">
+                          <Clock className="w-2.5 h-2.5 text-yellow-400 animate-spin" />
+                          <span className="text-[8px] font-mono font-bold text-yellow-400">PENDING</span>
+                        </div>
+                      ) : item.status === 'withdrawn' ? (
+                        <div className="w-full py-1 px-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center flex items-center justify-center gap-1">
+                          <Check className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="text-[8px] font-mono font-bold text-emerald-400">TERKIRIM</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleWithdrawItem(item)}
+                          disabled={withdrawingId !== null}
+                          className="w-full py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-sans font-extrabold text-[8px] rounded-lg tracking-wider active:scale-95 uppercase transition-all flex items-center justify-center gap-1 cursor-pointer border border-[#c084fc]/10 shadow-md shadow-indigo-950/50"
+                        >
+                          {withdrawingId === item.id ? (
+                            <span>PROSES...</span>
+                          ) : (
+                            <span>WITHDRAW</span>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="mt-3">
-                    {item.status === 'requested_withdraw' ? (
-                      <div className="w-full py-1.5 px-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center flex items-center justify-center gap-1">
-                        <Clock className="w-3 h-3 text-yellow-400 animate-spin" />
-                        <span className="text-[9px] font-mono font-bold text-yellow-400">PENDING WD</span>
-                      </div>
-                    ) : item.status === 'withdrawn' ? (
-                      <div className="w-full py-1.5 px-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center flex items-center justify-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-400" />
-                        <span className="text-[9px] font-mono font-bold text-emerald-400">TERKIRIM</span>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleWithdrawItem(item)}
-                        disabled={withdrawingId !== null}
-                        className="w-full py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-sans font-extrabold text-[9px] rounded-lg tracking-wider active:scale-95 uppercase transition-all flex items-center justify-center gap-1 cursor-pointer border border-[#c084fc]/10 shadow-md shadow-indigo-950/50"
-                      >
-                        {withdrawingId === item.id ? (
-                          <span>WD PROSES...</span>
-                        ) : (
-                          <>
-                            <span>WITHDRAW (DISCORD)</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           )}
         </div>

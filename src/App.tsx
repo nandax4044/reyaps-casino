@@ -105,6 +105,9 @@ export default function App() {
   // --- Wheel Game Configuration Loading ---
   const [showSettings, setShowSettings] = useState(false);
   const [prizes, setPrizes] = useState<Prize[]>([]);
+  const [wheelPublished, setWheelPublished] = useState<boolean>(true);
+  const [casesPublished, setCasesPublished] = useState<boolean>(true);
+  const [crashPublished, setCrashPublished] = useState<boolean>(true);
 
   const loadWheelConfig = async () => {
     try {
@@ -122,6 +125,12 @@ export default function App() {
       }
       // Then try API for admin-updated config
       const data = await API.getGameConfig('wheel');
+      
+      // Check published status
+      if (data.published !== undefined) {
+        setWheelPublished(data.published);
+      }
+      
       const apiPrizes = data.prizes || data;
       if (Array.isArray(apiPrizes) && apiPrizes.length > 0) {
         setPrizes(apiPrizes);
@@ -134,9 +143,34 @@ export default function App() {
     }
   };
 
+  const loadGamesPublishedStatus = async () => {
+    try {
+      // Load wheel published status
+      const wheelData = await API.getGameConfig('wheel');
+      if (wheelData.published !== undefined) {
+        setWheelPublished(wheelData.published);
+      }
+
+      // Load cases published status
+      const casesData = await API.getGameConfig('cases');
+      if (casesData.published !== undefined) {
+        setCasesPublished(casesData.published);
+      }
+
+      // Load crash published status
+      const crashData = await API.getGameConfig('crash');
+      if (crashData.published !== undefined) {
+        setCrashPublished(crashData.published);
+      }
+    } catch (e) {
+      console.warn('Failed to load games published status', e);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadWheelConfig();
+      loadGamesPublishedStatus();
     }
   }, [user]);
 
@@ -170,7 +204,6 @@ export default function App() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState<Prize | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [autoRemoveWn, setAutoRemoveWn] = useState(false); // Modal-specific auto-remove state
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Keyboard shortcut listener for toggling settings
@@ -265,7 +298,7 @@ export default function App() {
   };
 
   // WHEEL SPIN COST
-  const WHEEL_SPIN_COST = 20000;
+  const WHEEL_SPIN_COST = 2000;
 
   const handleSpinStart = () => {
     if (isSpinning || prizes.length < 2) return;
@@ -292,7 +325,6 @@ export default function App() {
   const handleSpinComplete = (winningPrize: Prize) => {
     setIsSpinning(false);
     setWinner(winningPrize);
-    setAutoRemoveWn(settings.autoRemove); // Sync default auto-remove preference
     setShowWinnerModal(true);
 
     // Save won item into player's database inventory securely!
@@ -328,12 +360,6 @@ export default function App() {
   // Close winning popup & optionally remove winning slice
   const handleCloseWinnerModal = () => {
     setShowWinnerModal(false);
-    if (winner && autoRemoveWn) {
-      const filtered = prizes.filter((p) => p.id !== winner.id);
-      setPrizes(filtered);
-      API.updateGameConfig('wheel', { prizes: filtered })
-        .catch((e) => console.error('Gagal simpan wheel config ke database:', e));
-    }
     setWinner(null);
   };
 
@@ -462,31 +488,9 @@ export default function App() {
             </div>
 
             {/* Winning Title Text label */}
-            <h4 className="font-display text-xl font-black text-white mb-4 bg-white/5 py-2 px-6 rounded-xl border border-white/5 shadow-inner">
+            <h4 className="font-display text-xl font-black text-white mb-6 bg-white/5 py-2 px-6 rounded-xl border border-white/5 shadow-inner">
               {winner.name}
             </h4>
-
-            {/* Dynamic Single-Spin Elimination Toggle Feature */}
-            <div className="flex items-center gap-3 bg-red-950/20 border border-red-500/20 rounded-xl p-3 w-full mb-6">
-              <input
-                id="modal-auto-remove"
-                type="checkbox"
-                checked={autoRemoveWn}
-                onChange={(e) => setAutoRemoveWn(e.target.checked)}
-                className="w-4.5 h-4.5 text-blue-600 rounded bg-[#0F0F1A] border-white/10 focus:ring-blue-500 cursor-pointer"
-              />
-              <div className="text-left">
-                <label
-                  htmlFor="modal-auto-remove"
-                  className="text-xs font-semibold text-slate-200 cursor-pointer select-none font-sans"
-                >
-                  Hapus hadiah ini dari roda
-                </label>
-                <p className="text-[10px] text-slate-400 font-sans">
-                  Hadiah ini tidak akan keluar lagi di spin berikutnya.
-                </p>
-              </div>
-            </div>
 
             {/* CTA action button */}
             <button
@@ -506,6 +510,11 @@ export default function App() {
           activeGame={activeGame}
           onNavigate={setActiveGame}
           onLogout={handleLogout}
+          gamesPublished={{
+            wheel: wheelPublished,
+            crash: crashPublished,
+            cases: casesPublished
+          }}
         />
       )}
 
@@ -527,6 +536,11 @@ export default function App() {
                 onOpenProfile={() => setActiveGame('profile')}
                 onOpenAdmin={() => setActiveGame('admin')}
                 onLogout={handleLogout}
+                gamesPublished={{
+                  wheel: wheelPublished,
+                  crash: crashPublished,
+                  cases: casesPublished
+                }}
               />
             </div>
 
@@ -585,8 +599,7 @@ export default function App() {
             {activeGame === 'wheel' && (
               (() => {
                 // Check if wheel game is published
-                const wheelConfig = prizes.length > 0 ? { published: true } : { published: true };
-                const isWheelPublished = wheelConfig.published !== false;
+                const isWheelPublished = wheelPublished !== false;
 
                 if (!isWheelPublished) {
                   return (

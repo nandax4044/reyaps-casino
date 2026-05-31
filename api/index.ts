@@ -392,7 +392,7 @@ const siteConfig: Record<string, any> = {
   siteName: 'ReyaBet',
   siteSubtitle: 'Online gacha in ReyaPs',
   footerText: 'WHEEL SPINNER CASINO © 2026 • Private Premium Client Build',
-  discordLink: 'https://discord.gg/dewagacor-staff',
+  discordLink: 'https://discord.gg/ZHF2N94p5',
   depositText: 'Silakan hubungi staff admin untuk melakukan top-up deposit saldo agar bisa bermain.',
   logoUrl: '/logo.png',
   welcomeMessage: 'Selamat datang di ReyaBet! Mainkan game seru dan menangkan hadiah.',

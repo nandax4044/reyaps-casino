@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reme — Player vs Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e1a;
+  --bg2: #0f1525;
+  --bg3: #141b2e;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --p: #e53935;
+  --p2: #ff6b6b;
+  --g: #00e676;
+  --g2: #69f0ae;
+  --gold: #ffd600;
+  --gold2: #ffea00;
+  --blue: #2979ff;
+  --teal: #00bcd4;
+  --text: #e8eaf6;
+  --text2: #90a4ae;
+  --text3: #546e7a;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow-x:hidden}
+
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 20%,rgba(229,57,53,0.08) 0%,transparent 50%),
+             radial-gradient(ellipse at 80% 80%,rgba(41,121,255,0.08) 0%,transparent 50%);
+  pointer-events:none;
+}
+
+/* LAYOUT */
+.app{max-width:900px;margin:0 auto;padding:16px;min-height:100vh;display:flex;flex-direction:column;gap:12px}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px}
+.logo{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:var(--p);letter-spacing:3px;text-shadow:0 0 20px rgba(229,57,53,0.5)}
+.logo span{color:var(--text2);font-size:11px;display:block;font-family:'Rajdhani',sans-serif;font-weight:400;letter-spacing:2px;margin-top:2px}
+.balance-box{text-align:right}
+.balance-label{font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase}
+.balance-val{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--gold);text-shadow:0 0 16px rgba(255,214,0,0.4)}
+
+/* HISTORY BAR */
+.history-bar{display:flex;gap:6px;flex-wrap:wrap;min-height:32px;padding:8px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;align-items:center}
+.hist-label{font-size:10px;color:var(--text3);letter-spacing:1px;margin-right:4px}
+.hist-chip{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Orbitron',sans-serif}
+.hist-win{background:rgba(0,230,118,0.12);color:var(--g);border:1px solid rgba(0,230,118,0.25)}
+.hist-lose{background:rgba(229,57,53,0.12);color:var(--p2);border:1px solid rgba(229,57,53,0.25)}
+.hist-draw{background:rgba(255,214,0,0.1);color:var(--gold);border:1px solid rgba(255,214,0,0.2)}
+
+/* MAIN GAME AREA */
+.game-area{display:grid;grid-template-columns:200px 1fr 200px;gap:16px;align-items:start}
+
+/* SIDE PANELS */
+.side-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.panel-title{font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.player-number{
+  width:80px;height:80px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Orbitron',sans-serif;font-size:36px;font-weight:900;
+  margin:0 auto 12px;
+  border:2px solid var(--border);
+  background:var(--bg3);
+  transition:all 0.4s;
+}
+.player-number.player-side{border-color:rgba(41,121,255,0.4);color:var(--blue);box-shadow:0 0 20px rgba(41,121,255,0.1)}
+.player-number.bot-side{border-color:rgba(229,57,53,0.4);color:var(--p2);box-shadow:0 0 20px rgba(229,57,53,0.1)}
+.player-number.win-glow{border-color:var(--g) !important;box-shadow:0 0 30px rgba(0,230,118,0.5) !important;color:var(--g) !important}
+.player-number.lose-glow{border-color:var(--p) !important;box-shadow:0 0 30px rgba(229,57,53,0.5) !important}
+.player-number.draw-glow{border-color:var(--gold) !important;box-shadow:0 0 30px rgba(255,214,0,0.5) !important;color:var(--gold) !important}
+.effective-val{font-size:11px;color:var(--text3);margin-top:4px;font-family:'Rajdhani',sans-serif}
+
+/* CENTER */
+.center-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px}
+
+/* WHEEL */
+.wheel-wrap{position:relative;width:240px;height:240px}
+.wheel-canvas{display:block;border-radius:50%;filter:drop-shadow(0 0 20px rgba(229,57,53,0.3))}
+.wheel-pointer{
+  position:absolute;top:50%;right:-18px;transform:translateY(-50%);
+  width:0;height:0;
+  border-top:14px solid transparent;
+  border-bottom:14px solid transparent;
+  border-right:22px solid var(--gold);
+  filter:drop-shadow(0 0 8px rgba(255,214,0,0.8));
+}
+
+/* MESSAGES */
+.msg-area{width:100%;display:flex;flex-direction:column;gap:6px;min-height:56px}
+.msg{
+  padding:8px 16px;border-radius:8px;font-size:14px;font-weight:600;
+  border:1px solid var(--border);background:var(--bg3);
+  animation:msgIn 0.3s ease;
+  letter-spacing:0.5px;
+}
+.msg .name{font-weight:700}
+.msg .name.player-name{color:var(--blue)}
+.msg .name.bot-name{color:var(--p2)}
+.msg .got-num{font-family:'Orbitron',sans-serif;font-weight:700}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* RESULT POPUP */
+.result-popup{
+  width:100%;padding:16px;border-radius:10px;
+  text-align:center;font-family:'Orbitron',sans-serif;
+  font-size:22px;font-weight:900;letter-spacing:2px;
+  opacity:0;transform:scale(0.9);
+  transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events:none;
+}
+.result-popup.show{opacity:1;transform:scale(1);pointer-events:auto}
+.result-popup.win{background:rgba(0,230,118,0.1);border:2px solid var(--g);color:var(--g);box-shadow:0 0 40px rgba(0,230,118,0.2)}
+.result-popup.lose{background:rgba(229,57,53,0.1);border:2px solid var(--p);color:var(--p2);box-shadow:0 0 40px rgba(229,57,53,0.2)}
+.result-popup.draw{background:rgba(255,214,0,0.08);border:2px solid var(--gold);color:var(--gold);box-shadow:0 0 40px rgba(255,214,0,0.2)}
+.result-sub{font-size:13px;font-family:'Rajdhani',sans-serif;font-weight:500;letter-spacing:1px;margin-top:6px;opacity:0.8}
+
+/* BET PANEL */
+.bet-panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.bet-label{font-size:11px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.bet-input-row{display:flex;gap:8px;align-items:center}
+.bet-input{
+  flex:1;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);font-size:16px;font-family:'Orbitron',sans-serif;font-weight:700;
+  padding:10px 14px;border-radius:8px;outline:none;
+  transition:border-color 0.2s;
+}
+.bet-input:focus{border-color:rgba(229,57,53,0.5)}
+.quick-btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qbtn{
+  flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-size:12px;font-weight:600;
+  cursor:pointer;font-family:'Rajdhani',sans-serif;transition:all 0.2s;
+}
+.qbtn:hover{background:rgba(229,57,53,0.1);border-color:rgba(229,57,53,0.3);color:var(--p2)}
+
+/* SPIN BTN */
+.spin-btn{
+  width:100%;padding:14px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,#c62828,#e53935,#ef5350);
+  color:#fff;font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;
+  letter-spacing:2px;cursor:pointer;transition:all 0.2s;
+  box-shadow:0 4px 20px rgba(229,57,53,0.4);
+  margin-top:4px;
+}
+.spin-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px rgba(229,57,53,0.6)}
+.spin-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+/* RULES */
+.rules{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.rules-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;letter-spacing:1px}
+.rule-item{font-size:12px;color:var(--text3);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);line-height:1.5}
+.rule-item:last-child{border-bottom:none}
+.rule-item strong{color:var(--text2)}
+
+/* CONFETTI */
+.confetti-wrap{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;overflow:hidden}
+.c-piece{position:absolute;width:8px;height:8px;top:-10px;animation:cffall linear forwards}
+@keyframes cffall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+
+@media(max-width:700px){
+  .game-area{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .side-panel{display:flex;gap:16px;align-items:center;text-align:left}
+  .player-number{margin:0;width:60px;height:60px;font-size:28px}
+  .wheel-wrap{width:200px;height:200px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">REME<span>Player vs Bot • ReyaBet</span></div>
+    <div class="balance-box">
+      <div class="balance-label">Balance</div>
+      <div class="balance-val" id="balance-display">1,000</div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-bar" id="history-bar">
+    <span class="hist-label">HISTORY</span>
+    <span style="font-size:11px;color:var(--text3)">No games yet</span>
+  </div>
+
+  <!-- Game Area -->
+  <div class="game-area">
+
+    <!-- Player Side -->
+    <div class="side-panel">
+      <div class="panel-title">YOU</div>
+      <div class="player-number player-side" id="player-num">?</div>
+      <div class="effective-val" id="player-eff"></div>
+    </div>
+
+    <!-- Center -->
+    <div class="center-panel">
+      <!-- Messages -->
+      <div class="msg-area" id="msg-area">
+        <div class="msg" style="color:var(--text3);text-align:center;font-size:13px">Place your bet and spin the wheel!</div>
+      </div>
+
+      <!-- Wheel -->
+      <div class="wheel-wrap">
+        <canvas id="wheel-canvas" class="wheel-canvas" width="240" height="240"></canvas>
+        <div class="wheel-pointer"></div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-popup" id="result-popup">
+        <div id="result-text">-</div>
+        <div class="result-sub" id="result-sub"></div>
+      </div>
+    </div>
+
+    <!-- Bot Side -->
+    <div class="side-panel">
+      <div class="panel-title">HOUSE</div>
+      <div class="player-number bot-side" id="bot-num">?</div>
+      <div class="effective-val" id="bot-eff"></div>
+    </div>
+  </div>
+
+  <!-- Bet Panel -->
+  <div class="bet-panel">
+    <div class="bet-label">Bet Amount</div>
+    <div class="bet-input-row">
+      <input type="number" class="bet-input" id="bet-input" value="100" min="10" max="50000" step="10">
+      <button class="spin-btn" id="spin-btn" onclick="startSpin()" style="width:auto;padding:10px 24px;font-size:13px">SPIN</button>
+    </div>
+    <div class="quick-btns">
+      <button class="qbtn" onclick="setBet(0.5)">½</button>
+      <button class="qbtn" onclick="setBet(2)">2×</button>
+      <button class="qbtn" onclick="document.getElementById('bet-input').value=100">100</button>
+      <button class="qbtn" onclick="document.getElementById('bet-input').value=500">500</button>
+      <button class="qbtn" onclick="document.getElementById('bet-input').value=1000">1K</button>
+      <button class="qbtn" onclick="document.getElementById('bet-input').value=Math.min(parseInt(document.getElementById('balance-display').textContent.replace(/,/g,'')),50000)">MAX</button>
+    </div>
+  </div>
+
+  <!-- Rules -->
+  <div class="rules">
+    <div class="rules-title">📜 CARA BERMAIN</div>
+    <div class="rule-item">🎡 Kamu dan House sama-sama memutar roda (angka 1–36)</div>
+    <div class="rule-item">🔢 Jika angka <strong>2 digit</strong>: digit dijumlahkan (23 → 2+3 = <strong>5</strong>)</div>
+    <div class="rule-item">🔢 Jika hasilnya masih 2 digit: ambil digit terakhir (29 → 2+9=11 → <strong>1</strong>)</div>
+    <div class="rule-item">⚡ Angka efektif <strong>0</strong> = AUTO WIN dari pihak yang mendapatnya (bayar <strong>3×</strong>)</div>
+    <div class="rule-item">✅ Kamu &gt; House = <strong>MENANG</strong> — saldo ×2</div>
+    <div class="rule-item">❌ Kamu &lt; House = <strong>KALAH</strong> — saldo berkurang</div>
+    <div class="rule-item">🤝 Kedua dapat 0 secara bersamaan = <strong>DRAW</strong></div>
+  </div>
+</div>
+
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<script>
+// =================== STATE ===================
+let balance = parseInt(localStorage.getItem('reme_balance') || '1000');
+let history = JSON.parse(localStorage.getItem('reme_history') || '[]');
+let spinning = false;
+let wheelAngle = 0;
+let animFrame = null;
+
+const NUMBERS = Array.from({length: 36}, (_, i) => i + 1);
+
+// Wheel colors — alternating red/dark like BetDice REME
+const SEG_COLORS = NUMBERS.map((n, i) => {
+  if (n % 9 === 0) return '#1b5e20'; // every 9th = green center
+  return i % 2 === 0 ? '#c62828' : '#1a1a2e';
+});
+
+// =================== INIT ===================
+updateBalanceDisplay();
+renderHistory();
+drawWheel(0);
+
+// =================== LOGIC ===================
+function getEffective(raw) {
+  let n = raw;
+  while (n >= 10) {
+    let digits = n.toString().split('').map(Number);
+    n = digits.reduce((a, b) => a + b, 0);
+  }
+  return n;
+}
+
+function getResult(playerRaw, botRaw) {
+  const pe = getEffective(playerRaw);
+  const be = getEffective(botRaw);
+
+  // Both 0 = draw
+  if (pe === 0 && be === 0) return { outcome: 'draw', mult: 0 };
+  // Player gets 0 (not bot) = player wins 3x
+  if (pe === 0) return { outcome: 'win', mult: 3 };
+  // Bot gets 0 (not player) = bot wins
+  if (be === 0) return { outcome: 'lose', mult: 0 };
+  // Normal comparison
+  if (pe > be) return { outcome: 'win', mult: 2 };
+  if (pe < be) return { outcome: 'lose', mult: 0 };
+  return { outcome: 'draw', mult: 0 };
+}
+
+// =================== SPIN ===================
+function startSpin() {
+  if (spinning) return;
+
+  const bet = parseInt(document.getElementById('bet-input').value) || 0;
+  if (bet < 10) { showMsg('Minimum bet adalah 10!', 'var(--p2)'); return; }
+  if (bet > balance) { showMsg('Saldo tidak cukup!', 'var(--p2)'); return; }
+
+  spinning = true;
+  document.getElementById('spin-btn').disabled = true;
+
+  // Reset UI
+  document.getElementById('player-num').textContent = '?';
+  document.getElementById('bot-num').textContent = '?';
+  document.getElementById('player-num').className = 'player-number player-side';
+  document.getElementById('bot-num').className = 'player-number bot-side';
+  document.getElementById('player-eff').textContent = '';
+  document.getElementById('bot-eff').textContent = '';
+  const popup = document.getElementById('result-popup');
+  popup.className = 'result-popup';
+
+  // Pick results
+  const playerRaw = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+  const botRaw    = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
+  const playerEff = getEffective(playerRaw);
+  const botEff    = getEffective(botRaw);
+
+  clearMsgs();
+
+  // Spin wheel animation
+  const spinDuration = 3500 + Math.random() * 1500;
+  const targetSegIdx = playerRaw - 1;
+  const segAngle = 360 / 36;
+  // Calculate final angle so pointer (right side = 0°) points to playerRaw segment
+  const targetAngle = wheelAngle + 720 + (360 - (targetSegIdx * segAngle + segAngle / 2)) % 360 + Math.random() * 10 - 5;
+
+  const startAngle = wheelAngle;
+  const startTime = performance.now();
+
+  function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / spinDuration, 1);
+    const eased = easeOut(progress);
+    wheelAngle = startAngle + (targetAngle - startAngle) * eased;
+    drawWheel(wheelAngle);
+
+    if (progress < 1) {
+      animFrame = requestAnimationFrame(animate);
+    } else {
+      wheelAngle = targetAngle % 360;
+      // Reveal results
+      setTimeout(() => revealResults(playerRaw, botRaw, playerEff, botEff, bet), 200);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function revealResults(playerRaw, botRaw, playerEff, botEff, bet) {
+  // Show player result
+  addMsg(`<span class="name player-name">nandax</span> memutar roda dan mendapat <span class="got-num" style="color:var(--blue)">${playerRaw}</span>!`);
+  document.getElementById('player-num').textContent = playerRaw;
+  if (playerEff !== playerRaw) {
+    document.getElementById('player-eff').textContent = `→ efektif: ${playerEff}`;
+  }
+
+  setTimeout(() => {
+    // Show bot result
+    addMsg(`<span class="name bot-name">House</span> memutar roda dan mendapat <span class="got-num" style="color:var(--p2)">${botRaw}</span>!`);
+    document.getElementById('bot-num').textContent = botRaw;
+    if (botEff !== botRaw) {
+      document.getElementById('bot-eff').textContent = `→ efektif: ${botEff}`;
+    }
+
+    setTimeout(() => {
+      // Determine result
+      const { outcome, mult } = getResult(playerRaw, botRaw);
+      const popup = document.getElementById('result-popup');
+
+      if (outcome === 'win') {
+        const winnings = bet * mult;
+        balance += winnings;
+        popup.className = 'result-popup win show';
+        document.getElementById('result-text').textContent = mult === 3 ? '⚡ JACKPOT WIN!' : '✓ YOU WIN!';
+        document.getElementById('result-sub').textContent = `+${winnings.toLocaleString()} (${mult}× bet) — efektif: Kamu ${playerEff} > House ${botEff}`;
+        document.getElementById('player-num').classList.add('win-glow');
+        document.getElementById('bot-num').classList.add('lose-glow');
+        addToHistory('win', `+${winnings}`);
+        launchConfetti();
+      } else if (outcome === 'lose') {
+        balance -= bet;
+        popup.className = 'result-popup lose show';
+        document.getElementById('result-text').textContent = '✗ YOU LOSE';
+        document.getElementById('result-sub').textContent = `-${bet.toLocaleString()} — efektif: Kamu ${playerEff} < House ${botEff}`;
+        document.getElementById('player-num').classList.add('lose-glow');
+        document.getElementById('bot-num').classList.add('win-glow');
+        addToHistory('lose', `-${bet}`);
+      } else {
+        popup.className = 'result-popup draw show';
+        document.getElementById('result-text').textContent = '— DRAW';
+        document.getElementById('result-sub').textContent = `Seri! Kedua pihak mendapat efektif ${playerEff} = ${botEff}`;
+        document.getElementById('player-num').classList.add('draw-glow');
+        document.getElementById('bot-num').classList.add('draw-glow');
+        addToHistory('draw', `0`);
+      }
+
+      // Handle game over
+      if (balance <= 0) {
+        balance = 0;
+        setTimeout(() => {
+          if (confirm('Saldo habis! Reset ke 1000?')) {
+            balance = 1000;
+            saveAndUpdate();
+          }
+        }, 1000);
+      }
+
+      saveAndUpdate();
+      spinning = false;
+      document.getElementById('spin-btn').disabled = false;
+    }, 700);
+  }, 700);
+}
+
+// =================== WHEEL DRAWING ===================
+function drawWheel(angle) {
+  const canvas = document.getElementById('wheel-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = W / 2 - 4;
+  const segCount = 36;
+  const segAngle = (2 * Math.PI) / segCount;
+  const offsetAngle = (angle * Math.PI) / 180;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Draw segments
+  for (let i = 0; i < segCount; i++) {
+    const startA = offsetAngle + i * segAngle - Math.PI / 2;
+    const endA   = startA + segAngle;
+    const n = NUMBERS[i];
+
+    // Segment fill
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, startA, endA);
+    ctx.closePath();
+
+    const isGreen = n % 9 === 0;
+    if (isGreen) {
+      ctx.fillStyle = '#1b5e20';
+    } else {
+      ctx.fillStyle = i % 2 === 0 ? '#b71c1c' : '#1a237e';
+    }
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Number text
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(startA + segAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${n >= 10 ? 9 : 10}px Rajdhani`;
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(n, R - 5, 3);
+    ctx.restore();
+  }
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,214,0,0.6)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Center circle
+  const cGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
+  cGrad.addColorStop(0, '#2e7d32');
+  cGrad.addColorStop(1, '#1b5e20');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+  ctx.fillStyle = cGrad;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,214,0,0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Center icon
+  ctx.font = '18px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🎰', cx, cy);
+}
+
+// =================== UI HELPERS ===================
+function clearMsgs() {
+  document.getElementById('msg-area').innerHTML = '';
+}
+
+function addMsg(html) {
+  const area = document.getElementById('msg-area');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = html;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showMsg(text, color) {
+  addMsg(`<span style="color:${color}">${text}</span>`);
+}
+
+function setBet(factor) {
+  const cur = parseInt(document.getElementById('bet-input').value) || 100;
+  document.getElementById('bet-input').value = Math.max(10, Math.round(cur * factor));
+}
+
+function updateBalanceDisplay() {
+  document.getElementById('balance-display').textContent = balance.toLocaleString();
+}
+
+function saveAndUpdate() {
+  localStorage.setItem('reme_balance', balance);
+  localStorage.setItem('reme_history', JSON.stringify(history));
+  updateBalanceDisplay();
+  renderHistory();
+}
+
+function addToHistory(outcome, label) {
+  history.unshift({ outcome, label });
+  if (history.length > 12) history.pop();
+}
+
+function renderHistory() {
+  const bar = document.getElementById('history-bar');
+  if (history.length === 0) {
+    bar.innerHTML = '<span class="hist-label">HISTORY</span><span style="font-size:11px;color:var(--text3)">No games yet</span>';
+    return;
+  }
+  bar.innerHTML = '<span class="hist-label">HISTORY</span>' +
+    history.map(h => `<span class="hist-chip hist-${h.outcome}">${h.label}</span>`).join('');
+}
+
+// =================== CONFETTI ===================
+function launchConfetti() {
+  const wrap = document.getElementById('confetti-wrap');
+  const colors = ['#ffd600','#00e676','#ff6b6b','#64b5f6','#e040fb','#ff8a65'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'c-piece';
+    el.style.left = Math.random() * 100 + 'vw';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+    el.style.width = (6 + Math.random() * 8) + 'px';
+    el.style.height = (6 + Math.random() * 8) + 'px';
+    el.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+    el.style.animationDelay = Math.random() * 0.5 + 's';
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+}
+
+// Draw initial
+drawWheel(0);
+</script>
+</body>
+</html>

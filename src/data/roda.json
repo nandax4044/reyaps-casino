@@ -1,46 +1,48 @@
 {
+  "published": false,
   "prizes": [
     {
-      "id": "1",
-      "name": "Luxury Hypercar 🏎️",
-      "image": "/images/wheel_car.png",
+      "id": "golden horse",
+      "name": "",
+      "image": "/images/goldenhorse.png",
       "color": "#0284c7",
-      "chance": 5
+      "chance": 10
     },
     {
       "id": "2",
-      "name": "Fine Gold Bullion 🪙",
-      "image": "/images/wheel_gold.png",
+      "name": "ances red",
+      "image": "/images/ances.png",
       "color": "#38bdf8",
-      "chance": 12
+      "chance": 3
     },
     {
       "id": "3",
-      "name": "iPhone 15 Pro 📱",
-      "image": "/images/wheel_phone.png",
+      "name": "ice horse",
+      "image": "/images/icehorse.png",
       "color": "#0369a1",
       "chance": 18
     },
     {
       "id": "4",
-      "name": "Bali Vacation Trip 🏝️",
-      "image": "/images/wheel_island.png",
+      "name": "Bildae",
+      "image": "/images/bildae.png",
       "color": "#0c4a6e",
-      "chance": 15
+      "chance": 5
     },
     {
       "id": "5",
-      "name": "PlayStation 5 Console 🎮",
-      "image": "/images/wheel_console.png",
+      "name": "angel wings",
+      "image": "/images/angelwin.png",
       "color": "#1e3a8a",
-      "chance": 22
+      "chance": 8
     },
+
     {
       "id": "6",
-      "name": "Legendary Mystery Box 🎁",
-      "image": "/images/wheel_mystery.png",
+      "name": "Ances blue",
+      "image": "/images/ancesb.png",
       "color": "#172554",
-      "chance": 28
+      "chance": 3
     }
   ],
   "settings": {
