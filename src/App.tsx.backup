@@ -15,7 +15,6 @@ import CurrencyDisplay from './components/CurrencyDisplay';
 import { OnlinePlayers } from './components/OnlinePlayers';
 import { GlobalChat } from './components/GlobalChat';
 import { Lobby } from './components/Lobby';
-import { ResponsiveNavbar } from './components/ResponsiveNavbar';
 import {
   Volume2,
   VolumeX,
@@ -499,114 +498,170 @@ export default function App() {
         </div>
       )}
 
-      {/* TOP HEADER BRAND BAR - NEW RESPONSIVE NAVBAR */}
+      {/* TOP HEADER BRAND BAR */}
       {!isFullscreen && (
-        <ResponsiveNavbar 
-          user={user}
-          activeGame={activeGame}
-          onNavigate={setActiveGame}
-          onLogout={handleLogout}
-        />
+        <header className="border-b border-white/10 py-5 px-6 md:px-12 flex flex-col lg:flex-row justify-between items-center bg-[#070914]/85 backdrop-blur-md sticky top-0 z-40 gap-4">
+          <div className="flex items-center gap-3 self-start lg:self-auto">
+            <div className="w-11 h-11 bg-blue-500/10 rounded-2xl border border-blue-500/30 flex items-center justify-center p-1.5 bg-black/40 shadow-lg">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(30,144,255,0.4)]" referrerPolicy="no-referrer" />
+            </div>
+            <div>
+              <h1 className="font-display font-black text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-300 tracking-tight uppercase">
+                 ReyaBet
+              </h1>
+              <p className="text-[9px] text-slate-400 font-mono tracking-widest font-black uppercase">
+                Online gacha in ReyaPs
+              </p>
+            </div>
+          </div>
+
+          {/* Game Selector Tab Navigation */}
+          <div className="flex bg-[#070915] p-1.5 border border-white/10 rounded-[20px] select-none shrink-0 overflow-x-auto max-w-full glass-panel-dark">
+            <button
+              onClick={() => {
+                setActiveGame('cases');
+                setShowSettings(false);
+              }}
+              className={`flex items-center gap-1.5 py-1.5 px-3 md:px-4 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                activeGame === 'cases'
+                  ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-900/40'
+                  : 'text-slate-400 hover:text-blue-400'
+              }`}
+            >
+              <Gift className="w-3.5 h-3.5" />
+              <span>Case Opening</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveGame('wheel');
+                setShowSettings(false);
+              }}
+              className={`flex items-center gap-1.5 py-1.5 px-3 md:px-4 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                activeGame === 'wheel'
+                  ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-900/40'
+                  : 'text-slate-400 hover:text-blue-400'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Roda Hadiah</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveGame('crash');
+                setShowSettings(false);
+              }}
+              className={`flex items-center gap-1.5 py-1.5 px-3 md:px-4 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                activeGame === 'crash'
+                  ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white shadow-lg shadow-blue-900/40'
+                  : 'text-slate-400 hover:text-blue-400'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Crash Game</span>
+            </button>
+
+            <div className="w-px h-5 bg-white/10 mx-1.5 align-middle self-center shrink-0" />
+
+            <button
+              onClick={() => {
+                setActiveGame('profile');
+                setShowSettings(false);
+              }}
+              className={`flex items-center gap-1.5 py-1.5 px-3 md:px-4 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                activeGame === 'profile'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-emerald-400'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Dashboard Player</span>
+            </button>
+
+            {user.is_staff && (
+              <button
+                onClick={() => {
+                  setActiveGame('admin');
+                  setShowSettings(false);
+                }}
+                className={`flex items-center gap-1.5 py-1.5 px-3 md:px-4 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                  activeGame === 'admin'
+                    ? 'bg-gradient-to-r from-red-600 to-pink-500 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-red-400'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Staff Dashboard</span>
+              </button>
+            )}
+          </div>
+
+          {/* User info, Balance tracker and logout */}
+          <div className="flex items-center gap-3.5 shrink-0 select-none">
+            <div className="flex flex-col text-right">
+              <span className="text-xs font-black text-slate-200 flex items-center justify-end gap-1">
+                {user.username}
+                {user.is_staff && (
+                  <span className="text-[8px] tracking-wider uppercase font-mono font-black bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">Admin</span>
+                )}
+              </span>
+              <div className="flex items-center justify-end mt-1">
+                <CurrencyDisplay balance={user.balance} size="xs" />
+              </div>
+            </div>
+
+            <div className="w-px h-8 bg-white/10" />
+
+            <button
+              onClick={handleLogout}
+              className="p-2.5 bg-red-950/20 border border-red-500/10 hover:border-red-500/40 text-red-400 hover:bg-red-900/20 rounded-xl cursor-pointer transition-all hover:scale-105 active:scale-95"
+              title="Keluar"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </header>
       )}
 
       {/* MAIN LAYOUT BODY */}
-      <main className="flex-1 w-full p-3 md:p-6 lg:p-8 relative z-10 flex flex-col justify-start">
-        <div className="max-w-7xl mx-auto w-full">
-        {activeGame === 'lobby' && (
-          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
-            {/* LEFT: Online Players */}
-            <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
-              <OnlinePlayers currentUser={user} />
-            </div>
+      <main className="flex-1 max-w-7xl mx-auto w-full p-3 md:p-6 lg:p-8 relative z-10 flex flex-col justify-start">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 lg:gap-8 items-start">
+          {/* LEFT COLUMN: ONLINE PLAYERS - Hidden on mobile, visible on lg+ */}
+          <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
+            <OnlinePlayers currentUser={user} />
+          </div>
 
-            {/* CENTER: Lobby Content */}
-            <div className="lg:col-span-6 col-span-12 flex flex-col gap-4 md:gap-6 w-full">
-              <Lobby 
-                user={user}
-                onSelectGame={(game) => setActiveGame(game)}
-                onOpenProfile={() => setActiveGame('profile')}
-                onOpenAdmin={() => setActiveGame('admin')}
-                onLogout={handleLogout}
-              />
-            </div>
-
-            {/* RIGHT: Global Chat */}
-            <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
-              <GlobalChat currentUser={user} />
-            </div>
-
-            {/* MOBILE: Tabs for Online Players & Chat */}
-            <div className="lg:hidden col-span-12 w-full mt-4">
-              <div className="flex gap-2 mb-3">
-                <button 
-                  onClick={() => setMobileSidebarTab('players')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                    mobileSidebarTab === 'players'
-                      ? 'bg-cyan-600 text-white'
-                      : 'bg-slate-800/50 text-slate-400'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5 inline mr-1" />
-                  Pemain Online
-                </button>
-                <button 
-                  onClick={() => setMobileSidebarTab('chat')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                    mobileSidebarTab === 'chat'
-                      ? 'bg-cyan-600 text-white'
-                      : 'bg-slate-800/50 text-slate-400'
-                  }`}
-                >
-                  <MessageCircle className="w-3.5 h-3.5 inline mr-1" />
-                  Global Chat
-                </button>
-              </div>
-              {mobileSidebarTab === 'players' && <OnlinePlayers currentUser={user} />}
-              {mobileSidebarTab === 'chat' && <GlobalChat currentUser={user} />}
-            </div>
+          {/* CENTER COLUMN: ACTIVE GAME OR DASHBOARD MODULES */}
+          <div className="lg:col-span-6 col-span-12 flex flex-col gap-4 md:gap-6 w-full">
+            {activeGame === 'crash' && (
+          <div className="w-full animate-fade-in">
+            <CrashGame user={user} refreshUser={fetchUserProfile} />
           </div>
         )}
 
-        {/* ========== GAME PAGES - NO SIDEBAR ========== */}
-        {(activeGame === 'cases' || activeGame === 'wheel' || activeGame === 'crash') && (
-          <div className="w-full">
-            {activeGame === 'crash' && (
-              <div className="w-full animate-fade-in">
-                <CrashGame user={user} refreshUser={fetchUserProfile} />
-              </div>
-            )}
+        {activeGame === 'cases' && (
+          <div className="w-full animate-fade-in">
+            <CaseOpeningGame user={user} refreshUser={fetchUserProfile} />
+          </div>
+        )}
 
-            {activeGame === 'cases' && (
-              <div className="w-full animate-fade-in">
-                <CaseOpeningGame user={user} refreshUser={fetchUserProfile} />
-              </div>
-            )}
+        {activeGame === 'profile' && (
+          <div className="w-full animate-fade-in">
+            <UserDashboard 
+              user={user} 
+              onLogout={handleLogout} 
+              onCloseDashboard={() => setActiveGame('cases')} 
+            />
+          </div>
+        )}
 
-            {activeGame === 'wheel' && (
-              (() => {
-                // Check if wheel game is published
-                const wheelConfig = prizes.length > 0 ? { published: true } : { published: true };
-                const isWheelPublished = wheelConfig.published !== false;
+        {activeGame === 'admin' && user.is_staff && (
+          <div className="w-full animate-fade-in">
+            <AdminDashboard onCloseAdmin={() => setActiveGame('cases')} />
+          </div>
+        )}
 
-                if (!isWheelPublished) {
-                  return (
-                    <div className="w-full flex flex-col items-center justify-center gap-4 py-16 px-4">
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">🔧</div>
-                        <h2 className="text-2xl font-black text-white mb-2">Roda Hadiah Sedang Dalam Perbaikan</h2>
-                        <p className="text-slate-400 text-sm max-w-md">
-                          Roda Hadiah sedang dalam pemeliharaan. Silakan coba lagi nanti atau mainkan game lain.
-                        </p>
-                      </div>
-                      <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-xs text-center max-w-md">
-                        ℹ️ Hubungi admin jika Anda memiliki pertanyaan
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start w-full animate-fade-in">
+        {activeGame === 'wheel' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start w-full animate-fade-in">
             
             {/* LEFT COLUMN: THE CENTRAL WHEEL VIEWPORT & SPIN TRIGGER PANEL */}
             <section className={`${
@@ -847,33 +902,44 @@ export default function App() {
 
               </section>
             )}
-                  </div>
-                );
-              })()
-            )}
           </div>
         )}
-
-        {/* ========== DASHBOARD PAGES - NO SIDEBAR ========== */}
-        {(activeGame === 'profile' || activeGame === 'admin') && (
-          <div className="w-full">
-            {activeGame === 'profile' && (
-              <div className="w-full animate-fade-in">
-                <UserDashboard 
-                  user={user} 
-                  onLogout={handleLogout} 
-                  onCloseDashboard={() => setActiveGame('lobby')} 
-                />
-              </div>
-            )}
-
-            {activeGame === 'admin' && user.is_staff && (
-              <div className="w-full animate-fade-in">
-                <AdminDashboard onCloseAdmin={() => setActiveGame('lobby')} />
-              </div>
-            )}
           </div>
-        )}
+
+          {/* RIGHT COLUMN: GLOBAL CHAT - Hidden on mobile, visible on lg+ */}
+          <div className="hidden lg:block lg:col-span-3 col-span-12 w-full lg:sticky lg:top-[100px]">
+            <GlobalChat currentUser={user} />
+          </div>
+
+          {/* MOBILE ONLY: Show Online Players & Chat in tabs at bottom */}
+          <div className="lg:hidden col-span-12 w-full mt-4">
+            <div className="flex gap-2 mb-3">
+              <button 
+                onClick={() => setMobileSidebarTab('players')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  mobileSidebarTab === 'players'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-800/50 text-slate-400'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 inline mr-1" />
+                Pemain Online
+              </button>
+              <button 
+                onClick={() => setMobileSidebarTab('chat')}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+                  mobileSidebarTab === 'chat'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-800/50 text-slate-400'
+                }`}
+              >
+                <MessageCircle className="w-3.5 h-3.5 inline mr-1" />
+                Global Chat
+              </button>
+            </div>
+            {mobileSidebarTab === 'players' && <OnlinePlayers currentUser={user} />}
+            {mobileSidebarTab === 'chat' && <GlobalChat currentUser={user} />}
+          </div>
         </div>
       </main>
 

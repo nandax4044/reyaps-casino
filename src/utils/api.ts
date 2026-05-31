@@ -163,5 +163,31 @@ export const API = {
     return request(`/api/admin/inventory/${itemId}`, {
       method: 'DELETE'
     });
+  },
+
+  // Withdrawal Endpoints
+  async getWithdrawalLogs(status?: string) {
+    const url = status 
+      ? `/api/admin/withdrawals?status=${status}`
+      : '/api/admin/withdrawals';
+    return request(url);
+  },
+
+  async completeWithdrawal(withdrawalId: string, notes?: string) {
+    return request(`/api/admin/withdrawals/${withdrawalId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ notes })
+    });
+  },
+
+  async rejectWithdrawal(withdrawalId: string, reason: string) {
+    return request(`/api/admin/withdrawals/${withdrawalId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+  },
+
+  async getUserWithdrawalHistory(userId: string) {
+    return request(`/api/user/withdrawals/${userId}`);
   }
 };

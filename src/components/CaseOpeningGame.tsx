@@ -391,12 +391,27 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
 
           {/* LARGE GRID VIEW ENLARGED: Renders big chest cards with real high-resolution PNG images */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {chests.map((chest) => (
+            {chests.map((chest) => {
+              // Check if chest is published
+              const isPublished = (chest as any).published !== false; // Default to true if not specified
+              
+              return (
               <div
                 key={chest.id}
-                onClick={() => setSelectedChestId(chest.id)}
-                className="bg-gradient-to-br from-[#1a1535]/90 to-[#0f0d1f]/95 hover:from-[#221a3f]/95 hover:to-[#14112a]/95 border-2 border-white/10 hover:border-purple-500/60 rounded-[28px] p-5 md:p-6 flex flex-col justify-between cursor-pointer transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_15px_45px_rgba(168,85,247,0.35)] group select-none relative overflow-hidden min-h-[420px]"
+                onClick={() => {
+                  if (isPublished) {
+                    setSelectedChestId(chest.id);
+                  }
+                }}
+                className={`bg-gradient-to-br from-[#1a1535]/90 to-[#0f0d1f]/95 hover:from-[#221a3f]/95 hover:to-[#14112a]/95 border-2 border-white/10 hover:border-purple-500/60 rounded-[28px] p-5 md:p-6 flex flex-col justify-between ${isPublished ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} transition-all duration-500 transform hover:-translate-y-2 hover:shadow-[0_15px_45px_rgba(168,85,247,0.35)] group select-none relative overflow-hidden min-h-[420px]`}
               >
+                {/* Maintenance Badge */}
+                {!isPublished && (
+                  <div className="absolute top-4 right-4 z-20 bg-red-500/90 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                    <span>🔧</span> Maintenance
+                  </div>
+                )}
+
                 {/* Decorative glow background colored according to the chest properties */}
                 <div className={`absolute -right-16 -top-16 w-56 h-56 bg-gradient-to-br ${chest.color} opacity-[0.06] group-hover:opacity-[0.18] rounded-full blur-3xl transition-all duration-500`} />
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-[3px] bg-transparent group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500 rounded-full transition-all duration-300" />
@@ -438,7 +453,8 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
                 </div>
 
               </div>
-            ))}
+            );
+            })}
           </div>
 
           {/* Quick instructions / Info block */}

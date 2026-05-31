@@ -1,0 +1,22 @@
+CARA MENAMBAHKAN GAMBAR KARAKTER UNTUK AUTH SCREEN
+===================================================
+
+1. Siapkan gambar karakter PNG (format PNG dengan background transparan lebih baik)
+2. Rename file menjadi: character.png
+3. Letakkan file di folder ini (public/)
+4. Refresh halaman login
+
+REKOMENDASI:
+- Format: PNG
+- Ukuran: 800x1000px atau lebih besar
+- Background: Transparan (opsional)
+- Style: Gaming character, cartoon, atau 3D character
+
+CONTOH SUMBER GAMBAR:
+- Freepik.com
+- Pngwing.com
+- Cleanpng.com
+- Atau buat sendiri dengan AI (Midjourney, DALL-E, etc)
+
+FALLBACK:
+Jika character.png tidak ada, sistem akan menggunakan logo.png sebagai fallback.

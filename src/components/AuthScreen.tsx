@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { API } from '../utils/api';
-import { Sparkles, User, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
+import { Users } from 'lucide-react';
 
 interface AuthScreenProps {
   onAuthSuccess: (user: any) => void;
@@ -43,53 +43,63 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
   return (
     <div 
-      className="min-h-screen text-slate-100 flex flex-col items-center justify-center font-sans p-4 relative overflow-hidden"
+      className="min-h-screen flex items-center justify-center p-4 md:p-8 relative overflow-hidden"
       style={{
-        background: "linear-gradient(rgba(10, 15, 30, 0.6), rgba(6, 10, 20, 0.85)), url('/background.png') center / cover no-repeat fixed"
+        background: "linear-gradient(rgba(10, 15, 30, 0.75), rgba(0, 0, 0, 0.9)), url('/background.png') center / cover no-repeat fixed"
       }}
     >
-      {/* Background neon blur effects */}
-      <div className="absolute top-1/4 left-1/4 w-[35%] aspect-square rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[35%] aspect-square rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
+      {/* Background gradient blur effects */}
+      <div className="absolute top-1/4 left-1/4 w-[40%] aspect-square rounded-full bg-blue-600/20 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[40%] aspect-square rounded-full bg-cyan-500/15 blur-[150px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[50%] aspect-square rounded-full bg-blue-900/10 blur-[180px] pointer-events-none" />
 
-      {/* Auth Card Container */}
-      <div className="w-full max-w-md z-10 animate-fade-in">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center mb-6 text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl border border-cyan-400/30 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.35)] mb-3 group transition-transform hover:scale-105 duration-300">
-            <img src="/logo.png" alt="Logo" className="w-12 h-12 object-contain" onError={(e) => {
-              (e.target as HTMLElement).style.display = 'none';
-            }} />
+      {/* Main Container - Split Screen with Glass Effect */}
+      <div className="w-full max-w-4xl backdrop-blur-xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[550px] relative z-10 border border-cyan-500/20"
+        style={{
+          background: "linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.85) 50%, rgba(15, 23, 42, 0.9) 100%)"
+        }}
+      >
+        
+        {/* LEFT SIDE - Form Section with Blue Glass */}
+        <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center relative backdrop-blur-sm"
+          style={{
+            background: "linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(29, 78, 216, 0.25) 50%, rgba(37, 99, 235, 0.2) 100%)"
+          }}
+        >
+          {/* Logo - BIGGER */}
+          <div className="mb-6 flex items-center gap-3">
+            
+            
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              REYABET.
+            </h1>
           </div>
-          <h1 className="font-display font-black text-2xl md:text-3xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 tracking-tight">
-            Reya Bet
-          </h1>
-          <p className="text-xs text-slate-400 font-mono tracking-widest mt-1 uppercase">
-           
-          </p>
-        </div>
 
-        {/* Form panel utilizing glass config */}
-        <div className="glass-panel-dark rounded-2xl p-6 md:p-8 border border-cyan-500/20 shadow-[0_0_50px_rgba(3,105,161,0.25)] relative overflow-hidden">
-          {/* Top subtle visual strip */}
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-cyan-400 to-blue-600" />
+          {/* Welcome Text */}
+          <div className="mb-6">
+            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 drop-shadow-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              {isLogin ? 'Hi Mayers!' : 'Join Us!'}
+            </h2>
+            <p className="text-xs text-cyan-200">
+              {isLogin ? 'Welcome to Reyabet Gaming Dashboard' : 'Create your gaming account'}
+            </p>
+          </div>
 
-          {/* Toggle buttons */}
-          <div className="flex bg-slate-950/65 p-1 border border-white/5 rounded-xl mb-6">
+          {/* Toggle Buttons - Top Right */}
+          <div className="absolute top-6 right-6 flex gap-2">
             <button
               type="button"
               onClick={() => {
                 setIsLogin(true);
                 setError('');
               }}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                 isLogin
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-900/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/50'
+                  : 'bg-white/10 text-cyan-200 hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>MASUK AKUN</span>
+              login
             </button>
             <button
               type="button"
@@ -97,122 +107,166 @@ export function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
                 setIsLogin(false);
                 setError('');
               }}
-              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
                 !isLogin
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-900/30'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/50'
+                  : 'bg-white/10 text-cyan-200 hover:bg-white/20 backdrop-blur-sm'
               }`}
             >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>DAFTAR BARU</span>
+              Join us
             </button>
           </div>
 
           {error && (
-            <div className="mb-4 py-2.5 px-3.5 bg-red-950/40 border border-red-500/30 text-xs text-red-300 rounded-xl font-medium animate-shake">
+            <div className="mb-3 py-2.5 px-3 bg-red-500/20 border border-red-400/30 text-xs text-red-200 rounded-xl backdrop-blur-sm">
               ⚠️ {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             {/* EMAIL (Sign Up Only) */}
             {!isLogin && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-300">Email Address</label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@email.com"
-                    className="w-full bg-[#0b0f19]/80 border border-white/10 focus:border-cyan-500/50 rounded-xl py-2.5 pl-10 pr-4 font-sans text-sm text-white placeholder-slate-600 outline-none transition-all focus:shadow-[0_0_15px_rgba(56,189,248,0.15)]"
-                  />
-                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your email"
+                  className="w-full bg-white/10 backdrop-blur-sm border border-cyan-500/30 rounded-xl py-3 px-4 font-sans text-sm text-white placeholder-cyan-300/50 outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
+                />
               </div>
             )}
 
             {/* USERNAME (Sign Up Only) */}
             {!isLogin && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-300">Username</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    pattern="[a-zA-Z0-9_]{3,16}"
-                    title="Username harus 3-16 karakter, hanya huruf, angka, dan undescored (_)"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="user_gacor"
-                    className="w-full bg-[#0b0f19]/80 border border-white/10 focus:border-cyan-500/50 rounded-xl py-2.5 pl-10 pr-4 font-sans text-sm text-white placeholder-slate-600 outline-none transition-all focus:shadow-[0_0_15px_rgba(56,189,248,0.15)]"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  pattern="[a-zA-Z0-9_]{3,16}"
+                  title="Username harus 3-16 karakter"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="w-full bg-white/10 backdrop-blur-sm border border-cyan-500/30 rounded-xl py-3 px-4 font-sans text-sm text-white placeholder-cyan-300/50 outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
+                />
               </div>
             )}
 
             {/* USERNAME / EMAIL (Login Only) */}
             {isLogin && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-300">Username / Email</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="text"
-                    required
-                    value={loginKey}
-                    onChange={(e) => setLoginKey(e.target.value)}
-                    placeholder="Email atau Username Anda"
-                    className="w-full bg-[#0b0f19]/80 border border-white/10 focus:border-cyan-500/50 rounded-xl py-2.5 pl-10 pr-4 font-sans text-sm text-white placeholder-slate-600 outline-none transition-all focus:shadow-[0_0_15px_rgba(56,189,248,0.15)]"
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  value={loginKey}
+                  onChange={(e) => setLoginKey(e.target.value)}
+                  placeholder="Your email"
+                  className="w-full bg-white/10 backdrop-blur-sm border border-cyan-500/30 rounded-xl py-3 px-4 font-sans text-sm text-white placeholder-cyan-300/50 outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
+                />
               </div>
             )}
 
             {/* PASSWORD */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-300">Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#0b0f19]/80 border border-white/10 focus:border-cyan-500/50 rounded-xl py-2.5 pl-10 pr-4 font-sans text-sm text-white placeholder-slate-600 outline-none transition-all focus:shadow-[0_0_15px_rgba(56,189,248,0.15)]"
-                />
-              </div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full bg-white/10 backdrop-blur-sm border border-cyan-500/30 rounded-xl py-3 px-4 font-sans text-sm text-white placeholder-cyan-300/50 outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all"
+              />
             </div>
+
+            {/* Forgot Password Link (Login Only) */}
+            {isLogin && (
+              <div className="text-right -mt-1">
+                <button type="button" className="text-xs text-cyan-300 hover:text-cyan-200 font-medium">
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             {/* Submit button */}
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-3 mt-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:via-blue-400 hover:to-indigo-500 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-500 text-white rounded-xl font-sans font-bold text-sm tracking-wider shadow-[0_4px_25px_rgba(3,105,161,0.35)] active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer`}
+              className="w-full py-3 mt-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:from-gray-600 disabled:to-gray-700 text-white rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/30 active:scale-[0.98] transition-all"
             >
               {loading ? (
-                <>
-                  <div className="w-4.5 h-4.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>MEMPROSES...</span>
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>PROCESSING...</span>
+                </div>
               ) : (
-                <>
-                  <span>{isLogin ? 'MASUK KE GATES' : 'DAFTAR SEKARANG'}</span>
-                  <Sparkles className="w-4 h-4 text-cyan-200" />
-                </>
+                <span>{isLogin ? 'Log in' : 'Sign up'}</span>
               )}
             </button>
+
+            {/* Sign up link */}
+            <div className="text-center mt-2">
+              <span className="text-xs text-cyan-200/70">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                }}
+                className="text-xs text-cyan-300 hover:text-cyan-200 font-bold"
+              >
+                {isLogin ? 'Sign up' : 'Log in'}
+              </button>
+            </div>
           </form>
         </div>
 
-        {/* Subtle footer */}
-        <p className="text-center text-[10px] text-slate-500 font-mono mt-6">
-          Reyabet SYSTEM CORE v2.8 &bull; PRIVATE CLIENT
-        </p>
+        {/* RIGHT SIDE - Character Image Section */}
+        <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-gray-900 via-blue-950 to-black items-end justify-center p-0 pb-0 relative overflow-hidden">
+          {/* Gradient overlays for depth */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/30 via-cyan-900/20 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-tl from-black/50 via-transparent to-blue-950/30"></div>
+          
+          {/* Gaming Spaces Community Badge */}
+          <div className="absolute top-6 right-6 flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-full border border-white/20">
+            <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center">
+              <Users className="w-4 h-4 text-gray-900" />
+            </div>
+            <div className="text-left">
+              <div className="text-xs font-bold text-white">Gaming Spaces</div>
+              <div className="text-[10px] text-gray-300">Community</div>
+            </div>
+          </div>
+
+          {/* Character Image - ALIGNED TO BOTTOM */}
+          <div className="relative w-full h-full flex items-end justify-center z-10">
+            <img 
+              src="/banner2.png" 
+              alt="Gaming Character" 
+              className="w-full h-full object-contain object-bottom drop-shadow-2xl"
+              style={{
+                maxWidth: '84%',
+                marginBottom: '0'
+              }}
+              onError={(e) => {
+                // Fallback to a placeholder if image not found
+                (e.target as HTMLImageElement).src = '/';
+                (e.target as HTMLImageElement).className = 'w-20 h-30 object-contain opacity-20 mb-8';
+              }}
+            />
+          </div>
+
+          {/* Decorative gradient at bottom - subtle */}
+          <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
+          
+          {/* Subtle glow effects */}
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/3 right-1/4 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl"></div>
+        </div>
       </div>
     </div>
   );

@@ -726,27 +726,19 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
       const winPayout = parseFloat((bet * target).toFixed(2));
       const profit = parseFloat((winPayout - bet).toFixed(2)); // Net profit (winnings minus original bet)
 
-      // Pick a random reward from permainanData Config
-      const crashPrizes = permainanData.prizes || [];
-      if (crashPrizes.length > 0) {
-        const randIndex = Math.floor(Math.random() * crashPrizes.length);
-        wonItem = crashPrizes[randIndex];
-      }
-
-      // credit payout and reward winning inventory item on DB!
+      // Crash Game: Only give balance (Lock or WL), no item prizes
+      // The winPayout is added directly to user balance
       API.addWinningItem({
-        name: wonItem ? wonItem.name : 'Cosmic Dust 🧪',
-        rarity: wonItem ? wonItem.rarity as any : 'Common',
-        value: wonItem ? wonItem.value : 100,
-        icon: wonItem ? wonItem.icon : '🧪',
-        image: wonItem ? wonItem.image : 'https://picsum.photos/seed/stardust/150/150',
-        addedBalance: winPayout // Add full winnings (bet × multiplier)
+        name: 'Crash Game Winnings 💰',
+        rarity: 'Legendary',
+        value: winPayout,
+        icon: '💰',
+        image: '/images/prize_space.png',
+        addedBalance: winPayout // Add full winnings (bet × multiplier) - NO ITEM PRIZE
       })
         .then(() => {
           refreshUser(); // Sync user data
-          if (wonItem) {
-            setWonItemNotification(wonItem); // Notification message
-          }
+          // No item notification for crash game - only balance update
           updateLeaderboard(profit);
         })
         .catch((err) => {
@@ -794,6 +786,27 @@ export default function CrashGame({ user, refreshUser }: CrashGameProps) {
   const wonGames = history.filter(h => h.outcome === 'WIN').length;
   const winRate = totalGames > 0 ? Math.round((wonGames / totalGames) * 100) : 0;
   const lastResult = history[0];
+
+  // Check if game is published
+  const isPublished = (permainanData as any).published !== false;
+
+  // If game is not published, show maintenance message
+  if (!isPublished) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center gap-4 py-16 px-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔧</div>
+          <h2 className="text-2xl font-black text-white mb-2">Game Sedang Dalam Perbaikan</h2>
+          <p className="text-slate-400 text-sm max-w-md">
+            Crash Game sedang dalam pemeliharaan. Silakan coba lagi nanti atau mainkan game lain.
+          </p>
+        </div>
+        <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-xs text-center max-w-md">
+          ℹ️ Hubungi admin jika Anda memiliki pertanyaan
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col gap-6" id="crash-game-view">

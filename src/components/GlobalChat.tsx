@@ -27,27 +27,19 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const lastMessageCountRef = useRef(0);
 
-  // Auto-scroll to bottom when new messages arrive (only if user is near bottom)
-  const scrollToBottom = (force = false) => {
-    const container = messagesEndRef.current?.parentElement;
-    if (container) {
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-      if (force || isNearBottom) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
+  // Scroll to bottom only on initial load
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    // Only auto-scroll if messages actually changed and not initial load
-    if (messages.length > 0 && !isInitialLoad) {
+    // Only scroll on initial load when messages first appear
+    if (messages.length > 0 && lastMessageCountRef.current === 0) {
       scrollToBottom();
     }
-    if (isInitialLoad && messages.length > 0) {
-      setIsInitialLoad(false);
-    }
+    lastMessageCountRef.current = messages.length;
   }, [messages.length]);
 
   // Fetch messages from API
@@ -113,7 +105,7 @@ export function GlobalChat({ currentUser }: GlobalChatProps) {
       }
       
       setInputMessage('');
-      scrollToBottom(true); // Force scroll after sending message
+      // Don't auto-scroll after sending message
     } catch (err: any) {
       setError(err.message || 'Gagal mengirim pesan');
     } finally {
