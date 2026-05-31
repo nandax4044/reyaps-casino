@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Trophy, Settings, HelpCircle } from 'lucide-react';
+import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, HelpCircle } from 'lucide-react';
 
 interface ResponsiveNavbarProps {
   user: any;
@@ -31,12 +31,6 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   // Close menu when navigating
   const handleNavClick = (game: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin') => {
     // Check if game is published
-    if (game === 'wheel' && gamesPublished?.wheel === false) {
-      setMaintenanceNotif('Roda Hadiah sedang dalam perbaikan. Silakan coba lagi nanti.');
-      setTimeout(() => setMaintenanceNotif(null), 3000);
-      setIsMenuOpen(false);
-      return;
-    }
     if (game === 'crash' && gamesPublished?.crash === false) {
       setMaintenanceNotif('Crash Game sedang dalam perbaikan. Silakan coba lagi nanti.');
       setTimeout(() => setMaintenanceNotif(null), 3000);
@@ -57,7 +51,6 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   const navLinks = [
     { id: 'lobby', label: 'Home', icon: Home },
     { id: 'cases', label: 'Case Opening', icon: Gamepad2 },
-    { id: 'wheel', label: 'Roda Hadiah', icon: Trophy },
     { id: 'crash', label: 'Crash Game', icon: Settings },
     { id: 'profile', label: 'Dashboard', icon: User },
   ];

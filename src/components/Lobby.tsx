@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gift, Sparkles, TrendingUp, User, ShieldCheck, LogOut, Crown, Zap, Gamepad2 } from 'lucide-react';
+import { Gift, TrendingUp, User, ShieldCheck, LogOut, Crown, Zap, Gamepad2 } from 'lucide-react';
 import CurrencyDisplay from './CurrencyDisplay';
 
 interface LobbyProps {
@@ -27,17 +27,6 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
       image: '/images/intichest2.png',
       stats: '15 Chests • 75 Items',
       published: gamesPublished?.cases !== false
-    },
-    {
-      id: 'wheel' as const,
-      name: 'Wheel',
-      description: 'Putar roda keberuntungan dan menangkan hadiah mewah eksklusif',
-      icon: Sparkles,
-      color: 'from-purple-600 to-pink-500',
-      bgGlow: 'bg-purple-500/10',
-      image: '/images/rllogo.png',
-      stats: '6 Prizes • Big Rewards',
-      published: gamesPublished?.wheel !== false
     },
     {
       id: 'crash' as const,

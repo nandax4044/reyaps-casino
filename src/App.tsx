@@ -1,9 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Prize, SpinSettings, SpinHistory } from './types';
-import { DEFAULT_PRIZES } from './utils/defaults';
-import { PrizeWheel } from './components/PrizeWheel';
-import { PrizeManager } from './components/PrizeManager';
-import { Confetti } from './components/Confetti';
 import { SoundEffects } from './components/SoundEffects';
 import CrashGame from './components/CrashGame';
 import CaseOpeningGame from './components/CaseOpeningGame';
@@ -17,26 +12,9 @@ import { GlobalChat } from './components/GlobalChat';
 import { Lobby } from './components/Lobby';
 import { ResponsiveNavbar } from './components/ResponsiveNavbar';
 import {
-  Volume2,
-  VolumeX,
-  Play,
-  RotateCcw,
-  Sparkles,
-  Settings,
-  History,
-  Maximize2,
-  Minimize2,
-  Clock,
-  Gauge,
-  CheckCircle,
-  HelpCircle,
-  Gift,
-  X,
-  TrendingUp,
   User,
   ShieldCheck,
   LogOut,
-  Coins,
   ShieldAlert,
   Users,
   MessageCircle
@@ -99,58 +77,15 @@ export default function App() {
   };
 
   // --- Dynamic Tab Selector ---
-  const [activeGame, setActiveGame] = useState<'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin'>('lobby');
+  const [activeGame, setActiveGame] = useState<'lobby' | 'crash' | 'cases' | 'profile' | 'admin'>('lobby');
   const [mobileSidebarTab, setMobileSidebarTab] = useState<'players' | 'chat'>('players');
 
-  // --- Wheel Game Configuration Loading ---
-  const [showSettings, setShowSettings] = useState(false);
-  const [prizes, setPrizes] = useState<Prize[]>([]);
-  const [wheelPublished, setWheelPublished] = useState<boolean>(true);
+  // --- Games Published Status ---
   const [casesPublished, setCasesPublished] = useState<boolean>(true);
   const [crashPublished, setCrashPublished] = useState<boolean>(true);
 
-  const loadWheelConfig = async () => {
-    try {
-      // First set default prizes immediately so wheel always has data
-      const saved = localStorage.getItem('wheel_spinner_prizes');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setPrizes(parsed);
-          }
-        } catch (e) {}
-      } else {
-        setPrizes(DEFAULT_PRIZES);
-      }
-      // Then try API for admin-updated config
-      const data = await API.getGameConfig('wheel');
-      
-      // Check published status
-      if (data.published !== undefined) {
-        setWheelPublished(data.published);
-      }
-      
-      const apiPrizes = data.prizes || data;
-      if (Array.isArray(apiPrizes) && apiPrizes.length > 0) {
-        setPrizes(apiPrizes);
-      }
-    } catch (e) {
-      console.warn('Dynamic config wheel failed, using fallback.', e);
-      if (prizes.length === 0) {
-        setPrizes(DEFAULT_PRIZES);
-      }
-    }
-  };
-
   const loadGamesPublishedStatus = async () => {
     try {
-      // Load wheel published status
-      const wheelData = await API.getGameConfig('wheel');
-      if (wheelData.published !== undefined) {
-        setWheelPublished(wheelData.published);
-      }
-
       // Load cases published status
       const casesData = await API.getGameConfig('cases');
       if (casesData.published !== undefined) {
@@ -169,7 +104,6 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      loadWheelConfig();
       loadGamesPublishedStatus();
     }
   }, [user]);
