@@ -3,11 +3,10 @@ import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, HelpCircl
 
 interface ResponsiveNavbarProps {
   user: any;
-  activeGame: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin';
-  onNavigate: (game: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin') => void;
+  activeGame: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin';
+  onNavigate: (game: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin') => void;
   onLogout: () => void;
   gamesPublished?: {
-    wheel?: boolean;
     crash?: boolean;
     cases?: boolean;
   };
@@ -29,7 +28,7 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   }, []);
 
   // Close menu when navigating
-  const handleNavClick = (game: 'lobby' | 'wheel' | 'crash' | 'cases' | 'profile' | 'admin') => {
+  const handleNavClick = (game: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin') => {
     // Check if game is published
     if (game === 'crash' && gamesPublished?.crash === false) {
       setMaintenanceNotif('Crash Game sedang dalam perbaikan. Silakan coba lagi nanti.');

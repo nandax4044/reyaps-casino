@@ -5,7 +5,6 @@ import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 
 import caseOpeningDefault from './src/data/case_opening.json' assert { type: 'json' };
-import rodaDefault from './src/data/roda.json' assert { type: 'json' };
 import permainanDefault from './src/data/permainan.json' assert { type: 'json' };
 
 const app = express();
@@ -60,7 +59,6 @@ const localDb = {
   inventory: [] as any[],
   configs: {
     cases: JSON.parse(JSON.stringify(caseOpeningDefault)),
-    wheel:  JSON.parse(JSON.stringify(rodaDefault)),
     crash:  JSON.parse(JSON.stringify(permainanDefault))
   } as Record<string, any>
 };
@@ -566,7 +564,6 @@ app.get('/api/games/config/:game_type', async (req, res) => {
   // Fallback to JSON files
   console.log(`[CONFIG] Using default JSON for ${game_type}`);
   if (game_type === 'cases')  return res.json(caseOpeningDefault);
-  if (game_type === 'wheel')  return res.json(rodaDefault);
   if (game_type === 'crash')  return res.json(permainanDefault);
   res.status(404).json({ error: 'Config type unknown' });
 });
@@ -615,7 +612,6 @@ app.post('/api/admin/config/:game_type/reset', authenticateUser, verifyStaff, as
 
   let defaultConfig: any = null;
   if (game_type === 'cases')  defaultConfig = caseOpeningDefault;
-  else if (game_type === 'wheel')  defaultConfig = rodaDefault;
   else if (game_type === 'crash')  defaultConfig = permainanDefault;
   else return res.status(404).json({ error: 'Game type tidak dikenal' });
 
@@ -816,7 +812,7 @@ app.get('/api/users/online', async (req, res) => {
   }
 
   const activities = [
-    'Membuka Golden Chest 🎁', 'Memutar Roda Hadiah 🎡', 'Bertaruh di Crash Game 🚀',
+    'Membuka Golden Chest 🎁', 'Bertaruh di Crash Game 🚀',
     'Mendapatkan 1.82x di Crash! 🎉', 'Idle di Lobby 💬', 'Deposit 200 WL ke staff 🏦',
     'Membuka Legendary Chest 👑', 'Withdraw 1 DL sukses 💎', 'Membuka Weapon Chest ⚔️'
   ];

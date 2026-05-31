@@ -1,15 +1,13 @@
 import React from 'react';
-import { Gift, TrendingUp, User, ShieldCheck, LogOut, Crown, Zap, Gamepad2 } from 'lucide-react';
-import CurrencyDisplay from './CurrencyDisplay';
+import { Gift, TrendingUp, Crown, Zap, Gamepad2 } from 'lucide-react';
 
 interface LobbyProps {
   user: any;
-  onSelectGame: (game: 'wheel' | 'crash' | 'cases') => void;
+  onSelectGame: (game: 'crash' | 'cases') => void;
   onOpenProfile: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
   gamesPublished?: {
-    wheel?: boolean;
     crash?: boolean;
     cases?: boolean;
   };

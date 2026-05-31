@@ -267,29 +267,6 @@ const caseOpeningDefault: any = {
   }
 };
 
-const rodaDefault: any = {
-  "prizes": [
-    { "id": "1", "name": "Luxury Hypercar 🏎️", "image": "/images/wheel_car.png", "color": "#0284c7", "chance": 5 },
-    { "id": "2", "name": "Fine Gold Bullion 🪙", "image": "/images/wheel_gold.png", "color": "#38bdf8", "chance": 12 },
-    { "id": "3", "name": "iPhone 15 Pro 📱", "image": "/images/wheel_phone.png", "color": "#0369a1", "chance": 18 },
-    { "id": "4", "name": "Bali Vacation Trip 🏝️", "image": "/images/wheel_island.png", "color": "#0c4a6e", "chance": 15 },
-    { "id": "5", "name": "PlayStation 5 Console 🎮", "image": "/images/wheel_console.png", "color": "#1e3a8a", "chance": 22 },
-    { "id": "6", "name": "Legendary Mystery Box 🎁", "image": "/images/wheel_mystery.png", "color": "#172554", "chance": 28 }
-  ],
-  "settings": {
-    "speed": "normal",
-    "duration": 6,
-    "autoRemove": false,
-    "soundEnabled": true,
-    "canvasSize": 500,
-    "glowAnimation": true,
-    "textGlowEffect": true,
-    "shadowDepth": 15,
-    "colorHighlightHex": "#38bdf8",
-    "backgroundBlurAmount": "20px"
-  }
-};
-
 const permainanDefault: any = {
   "crashSettings": {
     "countdownSeconds": 3,
@@ -331,7 +308,6 @@ const permainanDefault: any = {
 
 console.log('[CONFIG] Loaded complete default configs:', {
   chests: caseOpeningDefault.chests?.length || 0,
-  wheelPrizes: rodaDefault.prizes?.length || 0,
   crashPrizes: permainanDefault.prizes?.length || 0
 });
 
@@ -370,7 +346,6 @@ const localDb = {
   inventory: [] as any[],
   configs: {
     cases: JSON.parse(JSON.stringify(caseOpeningDefault)),
-    wheel: JSON.parse(JSON.stringify(rodaDefault)),
     crash: JSON.parse(JSON.stringify(permainanDefault))
   } as Record<string, any>
 };
@@ -1021,7 +996,6 @@ async function handleGetConfig(gameType: string | undefined, res: any) {
   }
 
   if (gameType === 'cases') return res.json(caseOpeningDefault);
-  if (gameType === 'wheel') return res.json(rodaDefault);
   if (gameType === 'crash') return res.json(permainanDefault);
   return res.status(404).json({ error: 'Config type unknown' });
 }
@@ -1211,7 +1185,6 @@ async function handleResetConfig(gameType: string, res: any) {
   let defaultConfig: any = null;
 
   if (gameType === 'cases') defaultConfig = JSON.parse(JSON.stringify(caseOpeningDefault));
-  else if (gameType === 'wheel') defaultConfig = JSON.parse(JSON.stringify(rodaDefault));
   else if (gameType === 'crash') defaultConfig = JSON.parse(JSON.stringify(permainanDefault));
   else return res.status(400).json({ error: 'Game type tidak dikenal!' });
 
@@ -1258,7 +1231,6 @@ async function handleOnlineUsers(res: any) {
   const activities = [
     'Membuka Golden Chest',
     'Bertaruh di Crash Game',
-    'Memutar Roda Hadiah',
     'Idle di Lobby',
     'Melihat Dashboard',
     'Membuka Legendary Chest',
@@ -1269,7 +1241,7 @@ async function handleOnlineUsers(res: any) {
   const mockPlayers = [
     { id: 'v1', username: 'GrowDev_Id', balance: 452300, is_staff: false, activity: activities[0] },
     { id: 'v2', username: 'WLSeller99', balance: 1250000, is_staff: false, activity: activities[1] },
-    { id: 'v3', username: 'nanddev', balance: 5000000, is_staff: true, activity: activities[7] },
+    { id: 'v3', username: 'nanddev', balance: 5000000, is_staff: true, activity: activities[6] },
     { id: 'v4', username: 'ProBreakerGT', balance: 82500, is_staff: false, activity: activities[2] },
     { id: 'v5', username: 'BGL_Digger', balance: 7520000, is_staff: false, activity: activities[3] },
     { id: 'v6', username: 'VortexWL', balance: 35000, is_staff: false, activity: activities[4] },

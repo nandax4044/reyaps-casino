@@ -14,7 +14,7 @@
         {
           "name": "Wigly",
           "rarity": "Common",
-          "chance": 60,
+          "chance": 100,
           "value": 5,
           "icon": "",
           "color": "#a1a1aa",
@@ -23,7 +23,7 @@
         {
           "name": "Cotd",
           "rarity": "Rare",
-          "chance": 25,
+          "chance": 50,
           "value": 30,
           "icon": "",
           "color": "#3b82f6",
@@ -33,7 +33,7 @@
           "name": "Golden Rod",
           "rarity": "Epic",
           "chance": 3,
-          "value": 5000,
+          "value": 50000000,
           "icon": "",
           "color": "#a855f7",
           "image": "/images/goldenrod.png"
@@ -42,7 +42,7 @@
           "name": "Fishing Hat",
           "rarity": "Legendary",
           "chance": 1,
-          "value": 10000,
+          "value": 1000000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/hatfishing.png"
@@ -51,7 +51,7 @@
           "name": "Thanks Giving Rod",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 10000,
+          "value": 1000000000,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/tgrod.png"
@@ -90,7 +90,7 @@
           "name": "Ances Red",
           "rarity": "Epic",
           "chance": 4,
-          "value": 500,
+          "value": 50000,
           "icon": "",
           "color": "#a855f7",
           "image": "/images/ances.png"
@@ -99,7 +99,7 @@
           "name": "Magplant 5000",
           "rarity": "Legendary",
           "chance": 2,
-          "value": 100000,
+          "value": 100000000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/magplant.png"
@@ -108,7 +108,7 @@
           "name": "Legendary Rayman",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 100000,
+          "value": 1000000000000000000000,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/lray2.png"
@@ -129,7 +129,7 @@
           "name": "Gaia",
           "rarity": "Rare",
           "chance": 2,
-          "value": 2000,
+          "value": 2000000,
           "icon": "",
           "color": "#a1a1aa",
           "image": "/images/gaia.png"
@@ -138,7 +138,7 @@
           "name": "UT",
           "rarity": "Rare",
           "chance":4,
-          "value": 2000,
+          "value": 200000,
           "icon": "",
           "color": "#3b82f6",
           "image": "/images/ut.png"
@@ -203,7 +203,7 @@
         {
           "name": "Emerald Lock",
           "rarity": "Epic",
-          "chance": 10,
+          "chance": 3,
           "value": 350,
           "icon": "",
           "color": "#a855f7",
@@ -212,8 +212,8 @@
         {
           "name": "Blue Gem Lock",
           "rarity": "Legendary",
-          "chance": 4,
-          "value": 1100,
+          "chance": 1,
+          "value": 110000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/blue_gem_lock.png"
@@ -222,7 +222,7 @@
           "name": "Royal Lock",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 5500,
+          "value": 5500000000000,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/royal1.png"
@@ -270,7 +270,7 @@
           "name": "Tricky",
           "rarity": "Rare",
           "chance": 4,
-          "value": 520,
+          "value": 520000000000000000000000000000000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/tricky2.png"
@@ -279,7 +279,7 @@
           "name": "Kaido",
           "rarity": "Rare",
           "chance": 1,
-          "value": 2800,
+          "value": 280000000000000000000000000,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/kaidohd.png"
@@ -309,7 +309,7 @@
           "name": "Golden Apple",
           "rarity": "Rare",
           "chance": 10,
-          "value": 70,
+          "value": 700000,
           "icon": "",
           "color": "#3b82f6",
           "image": "/images/120.png"
@@ -326,8 +326,8 @@
         {
           "name": "Davinci",
           "rarity": "Rare",
-          "chance": 4,
-          "value": 3000,
+          "chance": 2,
+          "value": 300000000000000000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/davinci.png"
@@ -336,7 +336,7 @@
           "name": "Legendary Dragon",
           "rarity": "Rare",
           "chance": 1,
-          "value": 5000,
+          "value": 5000000000000000,
           "icon": "",
           "color": "#eab308",
           "image": "/images/dragonoflegend.png"
@@ -345,7 +345,7 @@
           "name": "Legendary Wings",
           "rarity": "Rare",
           "chance": 1,
-          "value": 50000,
+          "value": 5000000000000000,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/legendarywings.png"

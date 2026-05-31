@@ -20,14 +20,14 @@ export interface UploadResult {
 /**
  * Upload image to Supabase Storage
  * @param file - File object to upload
- * @param bucket - Bucket name ('wheel-images', 'case-images', 'crash-images', 'game-assets')
- * @param folder - Optional folder path within bucket (e.g., 'prizes', 'items')
+ * @param bucket - Bucket name ('case-images', 'crash-images', 'game-assets')
+ * @param folder - Optional folder path within bucket (e.g., 'items', 'assets')
  * @returns UploadResult with public URL or error
  */
 export async function uploadImageToSupabase(
   file: File,
-  bucket: 'wheel-images' | 'case-images' | 'crash-images' | 'game-assets' = 'wheel-images',
-  folder: string = 'prizes'
+  bucket: 'case-images' | 'crash-images' | 'game-assets' = 'case-images',
+  folder: string = 'items'
 ): Promise<UploadResult> {
   try {
     // Validate file
@@ -216,7 +216,6 @@ async function logImageUpload(data: {
  * @returns Game type string
  */
 function getGameTypeFromBucket(bucket: string): string {
-  if (bucket.includes('wheel')) return 'wheel';
   if (bucket.includes('case')) return 'cases';
   if (bucket.includes('crash')) return 'crash';
   return 'general';
@@ -224,7 +223,7 @@ function getGameTypeFromBucket(bucket: string): string {
 
 /**
  * Get all uploaded images for a game type
- * @param gameType - Game type ('wheel', 'cases', 'crash', 'general')
+ * @param gameType - Game type ('cases', 'crash', 'general')
  * @returns Promise<Array> - List of uploaded images
  */
 export async function getUploadedImages(gameType?: string) {

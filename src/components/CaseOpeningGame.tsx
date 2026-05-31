@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import chestsData from '../data/case_opening.json';
-import { Confetti } from './Confetti';
 import { SoundEffects } from './SoundEffects';
 import { API } from '../utils/api';
 import { 
@@ -135,7 +134,6 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
   const [spinTranslation, setSpinTranslation] = useState<number>(0);
   const [winningItemResult, setWinningItemResult] = useState<CaseItem | null>(null);
   const [showPrizeOverlay, setShowPrizeOverlay] = useState<boolean>(false);
-  const [confettiActive, setConfettiActive] = useState<boolean>(false);
   
   // Auto mode settings
   const [autoSpinMode, setAutoSpinMode] = useState<'off' | 'x3' | 'x10' | 'infinite'>('off');
@@ -292,12 +290,6 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
             console.error('Gagal mendaftarkan item unboxing ke database:', err);
           });
 
-        // Trigger visual confetti bursts on Rare, Legendary, or Mythic pulls
-        if (winningItem.rarity === 'Legendary' || winningItem.rarity === 'Mythic') {
-          setConfettiActive(true);
-          setTimeout(() => setConfettiActive(false), 2600);
-        }
-
         // Loop auto spin if configured
         if (autoSpinMode !== 'off') {
           if (autoSpinMode === 'x3' && autoSpinsRemaining > 1) {
@@ -365,9 +357,6 @@ export default function CaseOpeningGame({ user, refreshUser }: CaseOpeningGamePr
   return (
     <div className="w-full flex flex-col gap-6" id="case-opening-view">
       
-      {/* Confetti overlay for legendary pulls */}
-      <Confetti active={confettiActive} />
-
       {/* Loading state */}
       {loadingConfig ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">

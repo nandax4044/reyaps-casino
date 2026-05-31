@@ -96,7 +96,7 @@ export const API = {
     });
   },
 
-  async getGameConfig(gameType: 'cases' | 'wheel' | 'crash') {
+  async getGameConfig(gameType: 'cases' | 'crash') {
     // Game config is public - try without token first, fallback with token
     const token = getAuthToken();
     const headers: Record<string, string> = {
@@ -140,14 +140,14 @@ export const API = {
     return request(`/api/admin/users/${userId}/inventory`);
   },
 
-  async updateGameConfig(gameType: 'cases' | 'wheel' | 'crash', config: any) {
+  async updateGameConfig(gameType: 'cases' | 'crash', config: any) {
     return request(`/api/admin/config/${gameType}/update`, {
       method: 'POST',
       body: JSON.stringify({ config })
     });
   },
 
-  async resetGameConfig(gameType: 'cases' | 'wheel' | 'crash') {
+  async resetGameConfig(gameType: 'cases' | 'crash') {
     return request(`/api/admin/config/${gameType}/reset`, {
       method: 'POST'
     });
