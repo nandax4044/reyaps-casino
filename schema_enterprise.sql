@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255), -- Optional, only for non-auth users
-    balance NUMERIC(15, 2) NOT NULL DEFAULT 500.00,
+    balance NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     role VARCHAR(50) NOT NULL DEFAULT 'Player', -- Player, VIP, Moderator, Administrator, Owner
     is_staff BOOLEAN NOT NULL DEFAULT FALSE,
     avatar_url TEXT,

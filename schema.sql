@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255), -- Optional, only for non-auth users
-    balance NUMERIC(15, 2) NOT NULL DEFAULT 500.00,
+    balance NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     is_staff BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -183,7 +183,7 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
-    500.00,
+    0.00,
     FALSE
   )
   ON CONFLICT (id) DO NOTHING;

@@ -219,7 +219,7 @@ app.post('/api/auth/register', async (req, res) => {
           id:       authUserId,
           email:    slugEmail,
           username: slugUsername,
-          balance:  500.00,
+          balance:  0.00,
           is_staff: false
         })
         .select('*')
@@ -254,7 +254,7 @@ app.post('/api/auth/register', async (req, res) => {
       email:      slugEmail,
       username:   slugUsername,
       password:   hashPassword(password),
-      balance:    1000.00,
+      balance:    0.00,
       is_staff:   slugUsername === 'admin' || localDb.users.length === 0,
       created_at: new Date().toISOString()
     };
