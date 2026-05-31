@@ -641,11 +641,37 @@ app.post('/api/admin/config/:game_type/update', authenticateUser, verifyStaff, a
 
   if (isSupabaseConfigured && client) {
     try {
-      const { error } = await client
+      // First, check if config exists
+      const { data: existing, error: checkError } = await client
         .from('game_configs')
-        .upsert({ game_type, config_data: configPayload, updated_at: new Date().toISOString() }, { onConflict: 'game_type' });
+        .select('game_type')
+        .eq('game_type', game_type)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (checkError) {
+        console.error('[ADMIN CONFIG CHECK ERROR]', checkError);
+        throw checkError;
+      }
+
+      if (existing) {
+        // Config exists - UPDATE
+        console.log(`[ADMIN] Updating existing ${game_type} config`);
+        const { error: updateError } = await client
+          .from('game_configs')
+          .update({ config_data: configPayload, updated_at: new Date().toISOString() })
+          .eq('game_type', game_type);
+
+        if (updateError) throw updateError;
+      } else {
+        // Config doesn't exist - INSERT
+        console.log(`[ADMIN] Inserting new ${game_type} config`);
+        const { error: insertError } = await client
+          .from('game_configs')
+          .insert({ game_type, config_data: configPayload, updated_at: new Date().toISOString() });
+
+        if (insertError) throw insertError;
+      }
+
       res.json({ success: true, message: `Berhasil mengupdate konfigurasi ${game_type}!` });
     } catch (e: any) {
       console.error('[ADMIN CONFIG UPDATE ERROR]', e);
