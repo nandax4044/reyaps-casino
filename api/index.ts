@@ -516,6 +516,10 @@ export default async function handler(req: any, res: any) {
       }
 
       // Fishing admin endpoints
+      if (path === '/admin/fishing/grant-access' && method === 'POST') {
+        return await handleGrantFishingAccess(user.id, body, res);
+      }
+
       if (path === '/admin/fishing/grant-bait' && method === 'POST') {
         return await handleGrantBait(user.id, body, res);
       }
@@ -1301,6 +1305,52 @@ async function handleOnlineUsers(res: any) {
 
 
 // ─── FISHING ADMIN HANDLERS ────────────────────────────────────────────────────
+
+async function handleGrantFishingAccess(adminId: string, body: any, res: any) {
+  const { user_id, duration_days } = body;
+
+  if (!user_id || !duration_days) {
+    return res.status(400).json({ error: 'Missing required fields: user_id and duration_days' });
+  }
+
+  if (duration_days <= 0) {
+    return res.status(400).json({ error: 'Duration must be greater than 0' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Calculate expiry date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + duration_days);
+
+      // Upsert fishing access
+      const { data, error } = await supabaseAdmin
+        .from('afk_access')
+        .upsert({
+          user_id: user_id,
+          feature: 'fishing',
+          granted_by: adminId,
+          granted_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
+          is_active: true
+        }, {
+          onConflict: 'user_id,feature'
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Granted fishing access to user ${user_id} for ${duration_days} days`);
+      return res.json({ success: true, access: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Grant fishing access error:', error);
+      return res.status(500).json({ error: 'Failed to grant fishing access: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Fishing access granted (local mode)' });
+  }
+}
 
 async function handleGrantBait(adminId: string, body: any, res: any) {
   const { user_id, amount, notes } = body;
