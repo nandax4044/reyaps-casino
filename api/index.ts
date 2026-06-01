@@ -2,11 +2,22 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
+// Import JSON files directly
+import caseOpeningData from '../src/data/case_opening.json';
+import permainanData from '../src/data/permainan.json';
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPLETE HARDCODED DATA FOR VERCEL DEPLOYMENT (ALL 15 CHESTS)
+// USE IMPORTED JSON DATA (SYNCED WITH src/data/)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Use imported data, filter only published chests
 const caseOpeningDefault: any = {
+  ...caseOpeningData,
+  chests: caseOpeningData.chests.filter((chest: any) => chest.published !== false)
+};
+
+// Fallback hardcoded data (jika import gagal)
+const caseOpeningFallback: any = {
   "chests": [
     {
       "id": "fishing",
@@ -267,7 +278,10 @@ const caseOpeningDefault: any = {
   }
 };
 
-const permainanDefault: any = {
+const permainanDefault: any = permainanData;
+
+// Fallback permainan data (jika import gagal)
+const permainanFallback: any = {
   "crashSettings": {
     "countdownSeconds": 3,
     "defaultPickMultiplier": "2.00",
@@ -306,9 +320,10 @@ const permainanDefault: any = {
   ]
 };
 
-console.log('[CONFIG] Loaded complete default configs:', {
+console.log('[CONFIG] Using imported JSON data:', {
   chests: caseOpeningDefault.chests?.length || 0,
-  crashPrizes: permainanDefault.prizes?.length || 0
+  crashPrizes: permainanDefault.prizes?.length || 0,
+  source: 'src/data/*.json'
 });
 
 // Supabase Setup
@@ -527,6 +542,52 @@ export default async function handler(req: any, res: any) {
       if (path.match(/\/admin\/fishing\/user-inventory\/[^/]+$/) && method === 'GET') {
         const userId = path.split('/').pop();
         return await handleGetFishingInventory(userId, res);
+      }
+
+      // Grant Rod Access
+      if (path === '/admin/fishing/grant-rod' && method === 'POST') {
+        return await handleGrantRod(user.id, body, res);
+      }
+
+      // Revoke Rod Access
+      if (path === '/admin/fishing/revoke-rod' && method === 'POST') {
+        return await handleRevokeRod(body, res);
+      }
+
+      // Get User Rod Access
+      if (path.match(/\/admin\/fishing\/user-rods\/[^/]+$/) && method === 'GET') {
+        const userId = path.split('/').pop();
+        return await handleGetUserRods(userId, res);
+      }
+
+      // Get Fishing Access List
+      if (path === '/admin/fishing/access-list' && method === 'GET') {
+        return await handleGetAccessList(res);
+      }
+
+      // Revoke Fishing Access
+      if (path === '/admin/fishing/revoke-access' && method === 'POST') {
+        return await handleRevokeFishingAccess(body, res);
+      }
+
+      // Get Active Fishers
+      if (path === '/admin/fishing/active' && method === 'GET') {
+        return await handleGetActiveFishers(res);
+      }
+
+      // Get Fishing Price Config
+      if (path === '/admin/fishing/price-config' && method === 'GET') {
+        return await handleGetPriceConfig(res);
+      }
+
+      // Update Fishing Price Config
+      if (path === '/admin/fishing/price-config' && method === 'POST') {
+        return await handleUpdatePriceConfig(body, res);
+      }
+
+      // Reset Fishing Price Config
+      if (path === '/admin/fishing/price-config/reset' && method === 'POST') {
+        return await handleResetPriceConfig(res);
       }
     }
 
@@ -1404,5 +1465,245 @@ async function handleGetFishingInventory(userId: string, res: any) {
     }
   } else {
     return res.json({ success: true, inventory: { bait_balance: 0 } });
+  }
+}
+
+async function handleGrantRod(adminId: string, body: any, res: any) {
+  const { user_id, rod_id, notes } = body;
+
+  if (!user_id || !rod_id) {
+    return res.status(400).json({ error: 'Missing required fields: user_id and rod_id' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Insert or update rod access
+      const { data, error } = await supabaseAdmin
+        .from('user_rod_access')
+        .upsert({
+          user_id: user_id,
+          rod_id: rod_id,
+          granted_by: adminId,
+          granted_at: new Date().toISOString(),
+          notes: notes || null
+        }, {
+          onConflict: 'user_id,rod_id'
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Granted rod ${rod_id} to user ${user_id}`);
+      return res.json({ success: true, access: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Grant rod error:', error);
+      return res.status(500).json({ error: 'Failed to grant rod: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Rod access granted (local mode)' });
+  }
+}
+
+async function handleRevokeRod(body: any, res: any) {
+  const { user_id, rod_id } = body;
+
+  if (!user_id || !rod_id) {
+    return res.status(400).json({ error: 'Missing required fields: user_id and rod_id' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('user_rod_access')
+        .delete()
+        .eq('user_id', user_id)
+        .eq('rod_id', rod_id);
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Revoked rod ${rod_id} from user ${user_id}`);
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Revoke rod error:', error);
+      return res.status(500).json({ error: 'Failed to revoke rod: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Rod access revoked (local mode)' });
+  }
+}
+
+async function handleGetUserRods(userId: string, res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_rod_access')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      return res.json({ success: true, rods: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get user rods error:', error);
+      return res.status(500).json({ error: 'Failed to get user rods' });
+    }
+  } else {
+    return res.json({ success: true, rods: [] });
+  }
+}
+
+async function handleGetAccessList(res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('afk_access')
+        .select('*, users(username, email)')
+        .eq('feature', 'fishing')
+        .order('granted_at', { ascending: false });
+
+      if (error) throw error;
+
+      return res.json({ success: true, access: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get access list error:', error);
+      return res.status(500).json({ error: 'Failed to get access list' });
+    }
+  } else {
+    return res.json({ success: true, access: [] });
+  }
+}
+
+async function handleRevokeFishingAccess(body: any, res: any) {
+  const { access_id } = body;
+
+  if (!access_id) {
+    return res.status(400).json({ error: 'Missing required field: access_id' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('afk_access')
+        .update({ is_active: false })
+        .eq('id', access_id);
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Revoked fishing access ${access_id}`);
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Revoke access error:', error);
+      return res.status(500).json({ error: 'Failed to revoke access: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Access revoked (local mode)' });
+  }
+}
+
+async function handleGetActiveFishers(res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('afk_fishing_sessions')
+        .select('*, users(username, email)')
+        .eq('is_active', true)
+        .order('started_at', { ascending: false });
+
+      if (error) throw error;
+
+      return res.json({ success: true, fishers: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get active fishers error:', error);
+      return res.status(500).json({ error: 'Failed to get active fishers' });
+    }
+  } else {
+    return res.json({ success: true, fishers: [] });
+  }
+}
+
+async function handleGetPriceConfig(res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('fish_price_config')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (error) throw error;
+
+      return res.json({ success: true, config: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get price config error:', error);
+      return res.status(500).json({ error: 'Failed to get price config' });
+    }
+  } else {
+    return res.json({ success: true, config: [] });
+  }
+}
+
+async function handleUpdatePriceConfig(body: any, res: any) {
+  const { config } = body;
+
+  if (!config || !Array.isArray(config)) {
+    return res.status(400).json({ error: 'Invalid config data' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Update each fish price
+      for (const item of config) {
+        const { id, price_per_lb } = item;
+        
+        if (!id || price_per_lb === undefined) continue;
+
+        await supabaseAdmin
+          .from('fish_price_config')
+          .update({ price_per_lb: price_per_lb })
+          .eq('id', id);
+      }
+
+      console.log(`[ADMIN] Updated price config for ${config.length} fish`);
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Update price config error:', error);
+      return res.status(500).json({ error: 'Failed to update price config: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Price config updated (local mode)' });
+  }
+}
+
+async function handleResetPriceConfig(res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Reset to default prices from fishing.json
+      const defaultPrices = [
+        { id: 'wigly', price_per_lb: 5 },
+        { id: 'cotd', price_per_lb: 30 },
+        { id: 'goldenrod', price_per_lb: 2500 },
+        { id: 'hatfishing', price_per_lb: 7000 },
+        { id: 'tgrod', price_per_lb: 10000 }
+      ];
+
+      for (const item of defaultPrices) {
+        await supabaseAdmin
+          .from('fish_price_config')
+          .upsert({
+            id: item.id,
+            price_per_lb: item.price_per_lb
+          }, {
+            onConflict: 'id'
+          });
+      }
+
+      console.log('[ADMIN] Reset price config to defaults');
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Reset price config error:', error);
+      return res.status(500).json({ error: 'Failed to reset price config: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, message: 'Price config reset (local mode)' });
   }
 }

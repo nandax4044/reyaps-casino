@@ -12,7 +12,7 @@
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["api/*.json"]
+        "includeFiles": ["api/*.json", "src/data/*.json"]
       }
     }
   ],

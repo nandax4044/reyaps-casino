@@ -29,6 +29,7 @@
     "dist",
     "supabase/functions",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "fishing-endpoints.ts"
   ]
 }

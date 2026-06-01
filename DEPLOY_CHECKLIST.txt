@@ -1,0 +1,110 @@
+═══════════════════════════════════════════════════════════
+🚀 DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════
+
+SEBELUM DEPLOY:
+═══════════════════════════════════════════════════════════
+
+[ ] 1. Backup database (optional tapi recommended)
+[ ] 2. Buka Supabase Dashboard (https://supabase.com)
+[ ] 3. Buka SQL Editor
+[ ] 4. Copy & paste FIX_DEPLOYMENT_ISSUES.sql
+[ ] 5. Klik Run - tunggu sukses
+[ ] 6. Copy & paste CREATE_MISSING_TABLES.sql
+[ ] 7. Klik Run - tunggu sukses
+[ ] 8. Verifikasi tidak ada error merah
+
+DEPLOY API:
+═══════════════════════════════════════════════════════════
+
+Pilih salah satu:
+
+OPSI A - Gunakan Script (Recommended):
+[ ] 9. Buka PowerShell di folder project
+[ ] 10. Jalankan: .\deploy_fixes.ps1
+[ ] 11. Ikuti instruksi di layar
+
+OPSI B - Manual:
+[ ] 9. git add .
+[ ] 10. git commit -m "fix: Add missing fishing endpoints"
+[ ] 11. git push origin main
+
+TUNGGU DEPLOYMENT:
+═══════════════════════════════════════════════════════════
+
+[ ] 12. Buka https://vercel.com/dashboard
+[ ] 13. Tunggu deployment selesai (1-2 menit)
+[ ] 14. Status harus "Ready" (hijau)
+
+TESTING:
+═══════════════════════════════════════════════════════════
+
+[ ] 15. Buka website Anda
+[ ] 16. Login sebagai admin
+[ ] 17. Buka Admin Dashboard
+
+Test Grant Fishing Access:
+[ ] 18. Fishing Management → Grant Access
+[ ] 19. Pilih user + duration
+[ ] 20. Klik Grant
+[ ] 21. ✅ Harus sukses tanpa error "bait_count"
+
+Test Grant Rod:
+[ ] 22. Rod Management → Grant Rod
+[ ] 23. Pilih user + rod
+[ ] 24. Klik Grant
+[ ] 25. ✅ Harus sukses tanpa error "Endpoint not found"
+
+Test Grant Bait:
+[ ] 26. Bait Management → Grant Bait
+[ ] 27. Pilih user + amount
+[ ] 28. Klik Grant
+[ ] 29. ✅ Harus sukses
+
+Test Price Config:
+[ ] 30. Price Configuration → Edit harga
+[ ] 31. Klik Save
+[ ] 32. ✅ Harus sukses
+
+Test Leaderboard:
+[ ] 33. Buka Fishing Game
+[ ] 34. Catch beberapa fish
+[ ] 35. Cek leaderboard
+[ ] 36. ✅ Data harus muncul
+
+SELESAI:
+═══════════════════════════════════════════════════════════
+
+[ ] 37. Semua test passed
+[ ] 38. Tidak ada error di console (F12)
+[ ] 39. Tidak ada error di Vercel logs
+
+🎉 DEPLOYMENT BERHASIL!
+
+═══════════════════════════════════════════════════════════
+
+JIKA ADA ERROR:
+═══════════════════════════════════════════════════════════
+
+1. Baca file: QUICK_FIX.md
+2. Baca file: DEPLOYMENT_FIX_GUIDE.md
+3. Cek browser console (F12)
+4. Cek Vercel logs
+5. Screenshot error dan analisis
+
+═══════════════════════════════════════════════════════════
+
+FILES YANG DIBUTUHKAN:
+═══════════════════════════════════════════════════════════
+
+✅ FIX_DEPLOYMENT_ISSUES.sql - Fix database
+✅ CREATE_MISSING_TABLES.sql - Create tables
+✅ deploy_fixes.ps1 - Deploy script
+✅ DEPLOYMENT_FIX_GUIDE.md - Panduan lengkap
+✅ QUICK_FIX.md - Panduan cepat
+✅ DEPLOYMENT_SUMMARY.md - Ringkasan
+✅ DEPLOY_CHECKLIST.txt - File ini
+
+═══════════════════════════════════════════════════════════
+Good luck! 🚀
+═══════════════════════════════════════════════════════════
