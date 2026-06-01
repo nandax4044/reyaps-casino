@@ -62,7 +62,9 @@ export default function App() {
       console.warn('Session expired or parsing issues. Clearing token.', e);
       const errorMsg = e?.message || 'Sesi Anda telah berakhir. Silakan login kembali.';
       setAuthError(errorMsg);
+      // Clear ALL auth data
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
       setUser(null);
     } finally {
       setLoadingUser(false);
@@ -70,6 +72,13 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Clear old tokens on first load to force fresh login
+    const hasRefreshToken = localStorage.getItem('refresh_token');
+    if (!hasRefreshToken && localStorage.getItem('auth_token')) {
+      // Old token without refresh_token, clear it
+      console.log('[APP] Clearing old token without refresh_token');
+      localStorage.removeItem('auth_token');
+    }
     fetchUserProfile();
   }, []);
 

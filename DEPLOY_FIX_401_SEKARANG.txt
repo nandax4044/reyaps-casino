@@ -1,0 +1,150 @@
+═══════════════════════════════════════════════════════════════════
+  🚨 FIX ERROR 401 - DEPLOY SEKARANG! 🚨
+═══════════════════════════════════════════════════════════════════
+
+MASALAH:
+--------
+❌ HTTP 401 "Unauthorized" - Token lama tidak valid
+❌ User tidak bisa login atau langsung logout
+❌ Error: "Token tidak valid atau sudah kadaluarsa"
+❌ Favicon 404 error
+
+PENYEBAB:
+---------
+Token lama yang tersimpan di localStorage tidak punya refresh_token
+dan sudah expired. Perlu di-clear dan login ulang dengan token baru.
+
+SOLUSI YANG DITERAPKAN:
+------------------------------
+✅ 1. Auto-clear old tokens tanpa refresh_token
+✅ 2. Better error handling saat refresh gagal
+✅ 3. Clear semua auth data saat logout
+✅ 4. Tambah favicon untuk fix 404
+✅ 5. Buat halaman /clear-tokens.html untuk user
+
+FILE YANG DIUBAH:
+-----------------
+✅ src/App.tsx - Auto clear old tokens on load
+✅ src/utils/api.ts - Better 401 handling
+✅ index.html - Tambah favicon
+✅ public/clear-tokens.html - Halaman clear tokens untuk user
+
+═══════════════════════════════════════════════════════════════════
+  🚀 DEPLOY SEKARANG (PILIH SALAH SATU):
+═══════════════════════════════════════════════════════════════════
+
+CARA 1: Gunakan Script (RECOMMENDED)
+-------------------------------------
+.\deploy-to-vercel.ps1
+
+
+CARA 2: Manual
+--------------
+git add .
+git commit -m "Fix 401 - auto clear old tokens and better error handling"
+git push origin main
+
+
+═══════════════════════════════════════════════════════════════════
+  📢 KIRIM PESAN INI KE SEMUA USER:
+═══════════════════════════════════════════════════════════════════
+
+🚨 PENTING - UPDATE APLIKASI 🚨
+
+Kami telah melakukan update untuk memperbaiki masalah login.
+
+JIKA ANDA MENGALAMI ERROR LOGIN:
+
+CARA 1 (Otomatis):
+1. Buka: https://your-app.vercel.app/clear-tokens.html
+2. Klik "Clear Tokens & Logout"
+3. Login ulang dengan username dan password Anda
+
+CARA 2 (Manual):
+1. Tekan F12 di browser
+2. Ketik: localStorage.clear()
+3. Tekan Enter
+4. Refresh page dan login ulang
+
+Setelah login ulang, Anda akan tetap login selama 30 hari!
+
+Terima kasih atas pengertiannya! 🙏
+
+═══════════════════════════════════════════════════════════════════
+  ⚠️ PENTING SETELAH DEPLOY:
+═══════════════════════════════════════════════════════════════════
+
+1. TEST LOGIN
+   ----------
+   - Buka app di browser
+   - Login dengan admin/admin123
+   - Cek di console (F12): localStorage.getItem('refresh_token')
+   - Harus ada refresh_token!
+
+2. KIRIM INSTRUKSI KE USER
+   -----------------------
+   Copy pesan di atas dan kirim ke semua user via:
+   - Discord/Telegram group
+   - In-game announcement
+   - Website banner
+
+3. MONITOR ERROR LOGS
+   ------------------
+   - Cek Vercel Function Logs
+   - Cek browser console untuk error
+   - Pastikan tidak ada error 401 lagi
+
+═══════════════════════════════════════════════════════════════════
+  🔧 CARA USER CLEAR TOKEN:
+═══════════════════════════════════════════════════════════════════
+
+CARA 1: Via Halaman Clear Tokens
+---------------------------------
+https://your-app.vercel.app/clear-tokens.html
+→ Klik tombol "Clear Tokens & Logout"
+→ Otomatis redirect ke login
+
+CARA 2: Via Browser Console
+----------------------------
+F12 → Console → ketik:
+localStorage.clear();
+location.reload();
+
+CARA 3: Via Browser Settings
+-----------------------------
+Ctrl + Shift + Delete
+→ Clear "Cookies and other site data"
+→ Clear "Cached images and files"
+→ Refresh page
+
+═══════════════════════════════════════════════════════════════════
+  ✅ EXPECTED RESULT SETELAH FIX:
+═══════════════════════════════════════════════════════════════════
+
+✅ User bisa login tanpa error 401
+✅ Token otomatis refresh setiap 1 jam
+✅ Tetap login sampai 30 hari
+✅ Tidak ada error "Token kadaluarsa" lagi
+✅ Favicon tidak 404 lagi
+✅ AFK fishing berjalan lancar
+
+═══════════════════════════════════════════════════════════════════
+  🧪 TESTING CHECKLIST:
+═══════════════════════════════════════════════════════════════════
+
+[ ] Build berhasil (npm run build)
+[ ] Deploy ke Vercel berhasil
+[ ] Login dengan admin/admin123 berhasil
+[ ] refresh_token tersimpan di localStorage
+[ ] Tidak ada error 401 di console
+[ ] Favicon tidak 404
+[ ] /clear-tokens.html bisa diakses
+[ ] User lain bisa login
+
+═══════════════════════════════════════════════════════════════════
+
+STATUS: ✅ SIAP DEPLOY - BUILD SUDAH BERHASIL!
+
+DEPLOY SEKARANG DAN KIRIM INSTRUKSI KE USER!
+
+═══════════════════════════════════════════════════════════════════

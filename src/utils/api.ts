@@ -18,7 +18,7 @@ async function request(endpoint: string, options: RequestInit = {}) {
     headers
   });
 
-  // If 401 and we have a refresh token, try to refresh
+  // If 401 and we have a refresh token, try to refresh ONCE
   if (response.status === 401 && localStorage.getItem('refresh_token')) {
     console.log('[API] Token expired, attempting refresh...');
     const refreshed = await refreshAuthToken();
@@ -36,6 +36,12 @@ async function request(endpoint: string, options: RequestInit = {}) {
         ...options,
         headers: newHeaders
       });
+    } else {
+      // Refresh failed, clear everything and throw error
+      console.log('[API] Refresh failed, clearing tokens');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      throw new Error('Token tidak valid atau sudah kadaluarsa. Silakan login ulang.');
     }
   }
 

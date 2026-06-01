@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
-# Script untuk deploy ke Vercel dengan cepat - FIX HTTP 405
+# Script untuk deploy ke Vercel dengan cepat - FIX HTTP 401
 
-Write-Host "🚀 FIX HTTP 405 ERROR - DEPLOYING TO VERCEL..." -ForegroundColor Cyan
+Write-Host "🚀 FIX HTTP 401 ERROR - DEPLOYING TO VERCEL..." -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Check git status
@@ -14,7 +14,7 @@ git add .
 
 Write-Host ""
 Write-Host "💾 Committing changes..." -ForegroundColor Yellow
-git commit -m "Fix HTTP 405 error - improve CORS headers and routing"
+git commit -m "Fix HTTP 401 - auto clear old tokens and better error handling"
 
 Write-Host ""
 Write-Host "🔄 Pushing to GitHub..." -ForegroundColor Yellow
@@ -25,11 +25,15 @@ Write-Host "✅ DONE! Vercel akan otomatis deploy sekarang." -ForegroundColor Gr
 Write-Host ""
 Write-Host "📊 Cek progress di: https://vercel.com/dashboard" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "⚠️  JANGAN LUPA:" -ForegroundColor Red
-Write-Host "   1. Set environment variables di Vercel Dashboard" -ForegroundColor White
-Write-Host "   2. SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY" -ForegroundColor White
-Write-Host "   3. Redeploy jika baru menambahkan env vars" -ForegroundColor White
-Write-Host "   4. Clear browser cache setelah deploy" -ForegroundColor White
+Write-Host "⚠️  PENTING - KIRIM PESAN INI KE USER:" -ForegroundColor Red
 Write-Host ""
-Write-Host "🧪 Test login setelah deploy berhasil!" -ForegroundColor Green
+Write-Host "   🚨 UPDATE APLIKASI 🚨" -ForegroundColor Yellow
+Write-Host "   Jika ada error login, lakukan ini:" -ForegroundColor White
+Write-Host "   1. Buka: https://your-app.vercel.app/clear-tokens.html" -ForegroundColor White
+Write-Host "   2. Klik 'Clear Tokens & Logout'" -ForegroundColor White
+Write-Host "   3. Login ulang dengan username dan password" -ForegroundColor White
+Write-Host ""
+Write-Host "   Atau manual: Tekan F12 → ketik localStorage.clear() → login ulang" -ForegroundColor White
+Write-Host ""
+Write-Host "🧪 Setelah deploy, test login dengan admin/admin123!" -ForegroundColor Green
 Write-Host ""
