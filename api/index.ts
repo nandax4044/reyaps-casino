@@ -1,15 +1,12 @@
 // Vercel Serverless Function Handler
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// USE FALLBACK DATA (Hardcoded for Vercel compatibility)
+// FALLBACK DATA (Hardcoded for Vercel compatibility)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Use fallback data directly
-const caseOpeningDefault: any = caseOpeningFallback;
-
-// Fallback hardcoded data (jika import gagal)
+// Fallback hardcoded data untuk case opening (jika import gagal)
 const caseOpeningFallback: any = {
   "chests": [
     {
@@ -271,7 +268,8 @@ const caseOpeningFallback: any = {
   }
 };
 
-const permainanDefault: any = permainanFallback;
+// Use fallback data directly
+const caseOpeningDefault: any = caseOpeningFallback;
 
 // Fallback permainan data (jika import gagal)
 const permainanFallback: any = {
@@ -312,6 +310,9 @@ const permainanFallback: any = {
     { "name": "Raja_Scatter", "score": 4900, "date": "2026-05-28" }
   ]
 };
+
+// Use permainan fallback data
+const permainanDefault: any = permainanFallback;
 
 console.log('[CONFIG] Using imported JSON data:', {
   chests: caseOpeningDefault.chests?.length || 0,
