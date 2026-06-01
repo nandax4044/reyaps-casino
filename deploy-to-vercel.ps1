@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
-# Script untuk deploy ke Vercel dengan cepat
+# Script untuk deploy ke Vercel dengan cepat - FIX HTTP 405
 
-Write-Host "🚀 DEPLOY KE VERCEL - STARTING..." -ForegroundColor Cyan
+Write-Host "🚀 FIX HTTP 405 ERROR - DEPLOYING TO VERCEL..." -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Check git status
@@ -14,7 +14,7 @@ git add .
 
 Write-Host ""
 Write-Host "💾 Committing changes..." -ForegroundColor Yellow
-git commit -m "Fix Vercel deployment - remove invalid runtime config and fix TypeScript errors"
+git commit -m "Fix HTTP 405 error - improve CORS headers and routing"
 
 Write-Host ""
 Write-Host "🔄 Pushing to GitHub..." -ForegroundColor Yellow
@@ -29,4 +29,7 @@ Write-Host "⚠️  JANGAN LUPA:" -ForegroundColor Red
 Write-Host "   1. Set environment variables di Vercel Dashboard" -ForegroundColor White
 Write-Host "   2. SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY" -ForegroundColor White
 Write-Host "   3. Redeploy jika baru menambahkan env vars" -ForegroundColor White
+Write-Host "   4. Clear browser cache setelah deploy" -ForegroundColor White
+Write-Host ""
+Write-Host "🧪 Test login setelah deploy berhasil!" -ForegroundColor Green
 Write-Host ""
