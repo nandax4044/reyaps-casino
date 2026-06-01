@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Fallback hardcoded data untuk case opening (jika import gagal)
-const caseOpeningFallback: any = {
+const caseOpeningFallback = {
   "chests": [
     {
       "id": "fishing",
@@ -269,10 +269,10 @@ const caseOpeningFallback: any = {
 };
 
 // Use fallback data directly
-const caseOpeningDefault: any = caseOpeningFallback;
+const caseOpeningDefault = caseOpeningFallback;
 
 // Fallback permainan data (jika import gagal)
-const permainanFallback: any = {
+const permainanFallback = {
   "crashSettings": {
     "countdownSeconds": 3,
     "defaultPickMultiplier": "2.00",
@@ -312,7 +312,7 @@ const permainanFallback: any = {
 };
 
 // Use permainan fallback data
-const permainanDefault: any = permainanFallback;
+const permainanDefault = permainanFallback;
 
 console.log('[CONFIG] Using imported JSON data:', {
   chests: caseOpeningDefault.chests?.length || 0,
