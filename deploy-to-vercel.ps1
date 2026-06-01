@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
-# Script untuk deploy ke Vercel dengan cepat - FIX HTTP 401
+# Script untuk deploy ke Vercel - FIX 404 ENDPOINT FINAL
 
-Write-Host "🚀 FIX HTTP 401 ERROR - DEPLOYING TO VERCEL..." -ForegroundColor Cyan
+Write-Host "🔥 FIX 404 ENDPOINT - DEPLOYING TO VERCEL..." -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Check git status
@@ -14,7 +14,7 @@ git add .
 
 Write-Host ""
 Write-Host "💾 Committing changes..." -ForegroundColor Yellow
-git commit -m "Fix HTTP 401 - auto clear old tokens and better error handling"
+git commit -m "Fix 404 endpoint - create separate API files for Vercel"
 
 Write-Host ""
 Write-Host "🔄 Pushing to GitHub..." -ForegroundColor Yellow
@@ -27,13 +27,23 @@ Write-Host "📊 Cek progress di: https://vercel.com/dashboard" -ForegroundColor
 Write-Host ""
 Write-Host "⚠️  PENTING - KIRIM PESAN INI KE USER:" -ForegroundColor Red
 Write-Host ""
-Write-Host "   🚨 UPDATE APLIKASI 🚨" -ForegroundColor Yellow
-Write-Host "   Jika ada error login, lakukan ini:" -ForegroundColor White
-Write-Host "   1. Buka: https://your-app.vercel.app/clear-tokens.html" -ForegroundColor White
-Write-Host "   2. Klik 'Clear Tokens & Logout'" -ForegroundColor White
+Write-Host "   🚨 UPDATE PENTING 🚨" -ForegroundColor Yellow
+Write-Host "   Kami telah memperbaiki masalah endpoint." -ForegroundColor White
+Write-Host ""
+Write-Host "   WAJIB LAKUKAN INI:" -ForegroundColor Red
+Write-Host "   1. Logout dari aplikasi" -ForegroundColor White
+Write-Host "   2. Clear browser cache (Ctrl + Shift + Delete)" -ForegroundColor White
 Write-Host "   3. Login ulang dengan username dan password" -ForegroundColor White
 Write-Host ""
-Write-Host "   Atau manual: Tekan F12 → ketik localStorage.clear() → login ulang" -ForegroundColor White
+Write-Host "   Atau cepat:" -ForegroundColor Yellow
+Write-Host "   - Tekan F12" -ForegroundColor White
+Write-Host "   - Ketik: localStorage.clear()" -ForegroundColor White
+Write-Host "   - Refresh dan login ulang" -ForegroundColor White
 Write-Host ""
-Write-Host "🧪 Setelah deploy, test login dengan admin/admin123!" -ForegroundColor Green
+Write-Host "   Setelah itu, semua akan berfungsi normal! 🎉" -ForegroundColor Green
+Write-Host ""
+Write-Host "🧪 Test setelah deploy:" -ForegroundColor Cyan
+Write-Host "   1. Login dengan admin/admin123" -ForegroundColor White
+Write-Host "   2. Cek console (F12) - tidak ada error 404" -ForegroundColor White
+Write-Host "   3. Profile harus load tanpa error" -ForegroundColor White
 Write-Host ""
