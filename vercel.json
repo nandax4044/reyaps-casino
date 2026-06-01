@@ -1,26 +1,4 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/api/auth/login",
-      "destination": "/api/auth/login"
-    },
-    {
-      "source": "/api/auth/register",
-      "destination": "/api/auth/register"
-    },
-    {
-      "source": "/api/auth/refresh",
-      "destination": "/api/auth/refresh"
-    },
-    {
-      "source": "/api/user/profile",
-      "destination": "/api/user/profile"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/index"
-    }
-  ]
+  "outputDirectory": "dist"
 }
