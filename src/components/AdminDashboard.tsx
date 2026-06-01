@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../utils/api';
 import CurrencyDisplay from './CurrencyDisplay';
+import { AdminFishingManagement } from './AdminFishingManagement';
 import { 
   Users, Bot, Sliders, ShieldAlert, Plus, Trash2, Edit, Save, 
-  Coins, Package, ArrowLeft, RefreshCw, Layers, Check, Info, Settings, RotateCcw
+  Coins, Package, ArrowLeft, RefreshCw, Layers, Check, Info, Settings, RotateCcw, Fish
 } from 'lucide-react';
 
 interface UserItem {
@@ -17,10 +18,11 @@ interface UserItem {
 
 interface AdminDashboardProps {
   onCloseAdmin: () => void;
+  onNavigateToFishing?: () => void;
 }
 
-export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'games'>('users');
+export function AdminDashboard({ onCloseAdmin, onNavigateToFishing }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'users' | 'games' | 'fishing'>('users');
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   
@@ -70,9 +72,10 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
   useEffect(() => {
     if (activeTab === 'users') {
       fetchUsers();
-    } else {
+    } else if (activeTab === 'games') {
       fetchGameConfig();
     }
+    // fishing tab handles its own data loading
   }, [activeTab, activeGameType]);
 
   // Handle Edit User Form Submit
@@ -296,7 +299,7 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
       )}
 
       {/* Main Sections Navigation */}
-      <div className="flex bg-slate-950/65 p-1 border border-white/5 rounded-2xl select-none max-w-sm">
+      <div className="flex bg-slate-950/65 p-1 border border-white/5 rounded-2xl select-none max-w-2xl">
         <button
           onClick={() => setActiveTab('users')}
           className={`flex-1 py-2 px-4 rounded-xl text-xs font-semibold tracking-wide transition flex items-center justify-center gap-1.5 cursor-pointer ${
@@ -318,6 +321,17 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
         >
           <Sliders className="w-3.5 h-3.5" />
           <span>EDIT GAME APPS</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('fishing')}
+          className={`flex-1 py-2 px-4 rounded-xl text-xs font-semibold tracking-wide transition flex items-center justify-center gap-1.5 cursor-pointer ${
+            activeTab === 'fishing'
+              ? 'bg-gradient-to-r from-red-500 to-red-700 text-white shadow-md shadow-red-950/50'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Fish className="w-3.5 h-3.5" />
+          <span>FISHING ACCESS</span>
         </button>
       </div>
 
@@ -395,6 +409,13 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
                           title="Audit Inventory"
                         >
                           <Package className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('fishing')}
+                          className="p-1 px-2 bg-cyan-950/40 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-950/60 rounded cursor-pointer"
+                          title="Kelola Fishing Access"
+                        >
+                          <Fish className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -978,6 +999,17 @@ export function AdminDashboard({ onCloseAdmin }: AdminDashboardProps) {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 3: FISHING ACCESS MANAGEMENT */}
+      {activeTab === 'fishing' && (
+        <AdminFishingManagement 
+          onClose={() => setActiveTab('users')} 
+          onEnterFishingRoom={onNavigateToFishing ? () => {
+            onCloseAdmin();
+            onNavigateToFishing();
+          } : undefined}
+        />
       )}
 
     </div>

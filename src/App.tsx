@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CrashGame from './components/CrashGame';
 import CaseOpeningGame from './components/CaseOpeningGame';
+import { FishingGameV3 } from './components/FishingGameV3';
 import { AuthScreen } from './components/AuthScreen';
 import { UserDashboard } from './components/UserDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -13,18 +14,28 @@ import { Users, MessageCircle } from 'lucide-react';
 
 export const PngEmoji = ({ src, alt, className = "w-4 h-4 inline-block object-contain" }: { src: string; alt: string; className?: string }) => {
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   if (hasError) {
     return <span className="inline-block font-sans">{alt}</span>;
   }
   
   return (
-    <img 
-      src={src} 
-      alt={alt} 
-      className={`${className} align-middle inline-block`}
-      onError={() => setHasError(true)} 
-    />
+    <>
+      {isLoading && (
+        <span className="inline-block animate-pulse bg-slate-700/50 rounded" style={{ width: '1rem', height: '1rem' }}></span>
+      )}
+      <img 
+        src={src} 
+        alt={alt} 
+        className={`${className} align-middle inline-block ${isLoading ? 'hidden' : ''}`}
+        onLoad={() => setIsLoading(false)}
+        onError={() => {
+          setHasError(true);
+          setIsLoading(false);
+        }} 
+      />
+    </>
   );
 };
 
@@ -34,6 +45,8 @@ export default function App() {
   const [loadingUser, setLoadingUser] = useState<boolean>(true);
 
   // Fetch the logged-in user profile from Supabase
+  const [authError, setAuthError] = useState<string>('');
+  
   const fetchUserProfile = async () => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
@@ -44,8 +57,11 @@ export default function App() {
     try {
       const profile = await API.getProfile();
       setUser(profile.user);
-    } catch (e) {
+      setAuthError('');
+    } catch (e: any) {
       console.warn('Session expired or parsing issues. Clearing token.', e);
+      const errorMsg = e?.message || 'Sesi Anda telah berakhir. Silakan login kembali.';
+      setAuthError(errorMsg);
       localStorage.removeItem('auth_token');
       setUser(null);
     } finally {
@@ -57,17 +73,22 @@ export default function App() {
     fetchUserProfile();
   }, []);
 
-  // Logout action handler
+  // Logout action handler with custom modal
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
   const handleLogout = () => {
-    if (window.confirm('Keluar dari akun Anda?')) {
-      API.logout();
-      setUser(null);
-      setActiveGame('lobby');
-    }
+    setShowLogoutModal(true);
+  };
+  
+  const confirmLogout = () => {
+    API.logout();
+    setUser(null);
+    setActiveGame('lobby');
+    setShowLogoutModal(false);
   };
 
   // --- Dynamic Tab Selector ---
-  const [activeGame, setActiveGame] = useState<'lobby' | 'crash' | 'cases' | 'profile' | 'admin'>('lobby');
+  const [activeGame, setActiveGame] = useState<'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin'>('lobby');
   const [mobileSidebarTab, setMobileSidebarTab] = useState<'players' | 'chat'>('players');
 
   // --- Games Published Status ---
@@ -102,15 +123,36 @@ export default function App() {
   if (loadingUser) {
     return (
       <div 
-        className="min-h-screen text-slate-100 flex flex-col items-center justify-center font-sans p-6 select-none relative overflow-hidden" 
+        className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
         style={{
-          background: "linear-gradient(rgba(10, 10, 18, 0.45), rgba(10, 10, 18, 0.85)), url('/background.png') center / cover no-repeat fixed"
+          background: "linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 8, 22, 0.85)), url('/background.png') center / cover no-repeat fixed"
         }}
       >
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-blue-500/5 blur-[90px] pointer-events-none" />
-        <div className="flex flex-col items-center gap-6 animate-pulse z-10">
-          <img src="/logo.png" alt="Logo" className="w-24 h-24 object-contain filter drop-shadow-[0_12px_24px_rgba(30,144,255,0.45)]" />
-          <h2 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400 tracking-[0.2em] font-mono">LOADING APPLICATION...</h2>
+        {/* Ambient Background Effects */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#1D4ED8] rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-pulse delay-700"></div>
+        </div>
+
+        {/* Loading Content */}
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          {/* Logo with Glow */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] rounded-full blur-2xl opacity-50 animate-pulse"></div>
+            <img src="/logo.png" alt="Logo" className="relative w-24 h-24 object-contain filter drop-shadow-2xl" />
+          </div>
+
+          {/* Loading Text */}
+          <div className="text-center space-y-3">
+            <h2 className="text-sm font-bold bg-gradient-to-r from-white via-[#67E8F9] to-white bg-clip-text text-transparent tracking-[0.3em] uppercase">
+              Loading Application
+            </h2>
+            
+            {/* Loading Bar */}
+            <div className="w-64 h-1 bg-white/[0.05] rounded-full overflow-hidden backdrop-blur-sm">
+              <div className="h-full bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] rounded-full animate-[shimmer_2s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -118,21 +160,31 @@ export default function App() {
 
   // --- Render Authentication if not logged in ---
   if (!user) {
-    return <AuthScreen onAuthSuccess={fetchUserProfile} />;
+    return (
+      <>
+        {authError && (
+          <div className="fixed top-4 right-4 z-50 bg-red-500/90 text-white px-4 py-3 rounded-lg shadow-lg max-w-md">
+            <p className="text-sm font-semibold">{authError}</p>
+          </div>
+        )}
+        <AuthScreen onAuthSuccess={fetchUserProfile} />
+      </>
+    );
   }
 
   return (
     <div
       id="outer-shell"
-      style={{ 
-        fontFamily: "Inter, sans-serif",
-        background: "linear-gradient(rgba(10, 15, 30, 0.55), rgba(10, 15, 30, 0.8)), url('/background.png') center / cover no-repeat fixed"
+      className="min-h-screen text-white selection:bg-[#38BDF8]/30 selection:text-white flex flex-col relative overflow-x-hidden"
+      style={{
+        background: "linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 8, 22, 0.85)), url('/background.png') center / cover no-repeat fixed"
       }}
-      className="min-h-screen text-slate-100 selection:bg-blue-600 selection:text-white flex flex-col relative overflow-x-hidden blur-background-ambient"
     >
-      {/* Dynamic Background visual blur orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] aspect-square rounded-full bg-blue-900/10 blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-indigo-950/10 blur-[150px] pointer-events-none" />
+      {/* Ambient Background Effects - Subtle untuk tidak menutupi background.png */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#1D4ED8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse delay-700"></div>
+      </div>
 
       {/* TOP HEADER BRAND BAR - NEW RESPONSIVE NAVBAR */}
       <ResponsiveNavbar 
@@ -209,7 +261,7 @@ export default function App() {
         )}
 
         {/* ========== GAME PAGES - NO SIDEBAR ========== */}
-        {(activeGame === 'cases' || activeGame === 'crash') && (
+        {(activeGame === 'cases' || activeGame === 'crash' || activeGame === 'fishing') && (
           <div className="w-full">
             {activeGame === 'crash' && (
               <div className="w-full animate-fade-in">
@@ -220,6 +272,12 @@ export default function App() {
             {activeGame === 'cases' && (
               <div className="w-full animate-fade-in">
                 <CaseOpeningGame user={user} refreshUser={fetchUserProfile} />
+              </div>
+            )}
+
+            {activeGame === 'fishing' && (
+              <div className="w-full animate-fade-in">
+                <FishingGameV3 user={user} onBack={() => setActiveGame('lobby')} />
               </div>
             )}
           </div>
@@ -240,7 +298,10 @@ export default function App() {
 
             {activeGame === 'admin' && user.is_staff && (
               <div className="w-full animate-fade-in">
-                <AdminDashboard onCloseAdmin={() => setActiveGame('lobby')} />
+                <AdminDashboard 
+                  onCloseAdmin={() => setActiveGame('lobby')} 
+                  onNavigateToFishing={() => setActiveGame('fishing')}
+                />
               </div>
             )}
           </div>
@@ -252,6 +313,30 @@ export default function App() {
       <footer className="border-t border-white/10 py-5 text-center text-[10px] text-slate-500 font-mono mt-auto relative z-10 glass-panel-dark">
         WHEEL SPINNER CASINO &copy; 2026 &bull; Private Premium Client Build
       </footer>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl shadow-cyan-500/20">
+            <h3 className="text-xl font-bold text-white mb-3">Konfirmasi Logout</h3>
+            <p className="text-slate-400 mb-6">Apakah Anda yakin ingin keluar dari akun Anda?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold transition-all"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all"
+              >
+                Ya, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

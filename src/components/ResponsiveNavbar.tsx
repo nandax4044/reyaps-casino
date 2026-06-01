@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, HelpCircle } from 'lucide-react';
+import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, Fish } from 'lucide-react';
 
 interface ResponsiveNavbarProps {
   user: any;
-  activeGame: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin';
-  onNavigate: (game: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin') => void;
+  activeGame: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin';
+  onNavigate: (game: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin') => void;
   onLogout: () => void;
   gamesPublished?: {
     crash?: boolean;
@@ -28,7 +28,7 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   }, []);
 
   // Close menu when navigating
-  const handleNavClick = (game: 'lobby' | 'crash' | 'cases' | 'profile' | 'admin') => {
+  const handleNavClick = (game: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin') => {
     // Check if game is published
     if (game === 'crash' && gamesPublished?.crash === false) {
       setMaintenanceNotif('Crash Game sedang dalam perbaikan. Silakan coba lagi nanti.');
@@ -51,6 +51,7 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
     { id: 'lobby', label: 'Home', icon: Home },
     { id: 'cases', label: 'Case Opening', icon: Gamepad2 },
     { id: 'crash', label: 'Crash Game', icon: Settings },
+    { id: 'fishing', label: 'AFK Fishing', icon: Fish },
     { id: 'profile', label: 'Dashboard', icon: User },
   ];
 

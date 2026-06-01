@@ -1,0 +1,959 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { API } from '../utils/api';
+import fishingData from '../data/fishing.json';
+import { ChevronLeft, Clock, Play, Pause, Zap, Fish as FishIcon, Activity, TrendingUp, Waves, Worm } from 'lucide-react';
+import { FishingCharacterAnimation } from './FishingCharacterAnimation';
+
+interface FishingGameV3Props {
+  user: any;
+  onBack: () => void;
+}
+
+interface FishLog {
+  id: string;
+  fish_name: string;
+  final_lb: number;
+  sell_price: number;
+  caught_at: string;
+  rod_used: string;
+}
+
+export function FishingGameV3({ user, onBack }: FishingGameV3Props) {
+  // States
+  const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessData, setAccessData] = useState<any>(null);
+  const [inventory, setInventory] = useState<any>(null);
+  const [userRods, setUserRods] = useState<any[]>([]);
+  const [equippedRod, setEquippedRod] = useState<string>('ez_rod');
+  const [isAFKActive, setIsAFKActive] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState('');
+  const [fishLogs, setFishLogs] = useState<FishLog[]>([]);
+  const [pendingFishCount, setPendingFishCount] = useState(0);
+  const [convertAmount, setConvertAmount] = useState<string>('');
+  const [isConverting, setIsConverting] = useState(false);
+
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const statusCheckRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (accessData && accessData.expires_at) {
+      updateTimer();
+      timerIntervalRef.current = setInterval(updateTimer, 1000);
+      return () => {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      };
+    }
+  }, [accessData]);
+
+  useEffect(() => {
+    if (isAFKActive) {
+      statusCheckRef.current = setInterval(() => {
+        refreshData();
+      }, 5000);
+
+      return () => {
+        if (statusCheckRef.current) clearInterval(statusCheckRef.current);
+      };
+    }
+  }, [isAFKActive]);
+
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (statusCheckRef.current) clearInterval(statusCheckRef.current);
+    };
+  }, []);
+
+  const init = async () => {
+    await checkAccess();
+    await loadUserRods();
+    await loadInventory();
+    await checkAFKStatus();
+    await loadFishLogs();
+    await claimPendingFish();
+    setLoading(false);
+  };
+
+  const refreshData = async () => {
+    await loadInventory();
+    await loadFishLogs();
+    await checkAFKStatus();
+  };
+
+  const updateTimer = () => {
+    if (!accessData) return;
+    const now = new Date().getTime();
+    const expires = new Date(accessData.expires_at).getTime();
+    const diff = expires - now;
+
+    if (diff <= 0) {
+      setTimeRemaining('Expired');
+      stopAFKFishing();
+      setHasAccess(false);
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    setTimeRemaining(`${days}d ${hours}h ${minutes}m`);
+  };
+
+  const checkAccess = async () => {
+    try {
+      const response = await API.checkFishingAccess();
+      if (response.hasAccess) {
+        setHasAccess(true);
+        setAccessData(response.access);
+      }
+    } catch (error: any) {
+      console.error('Error checking access:', error);
+      if (error.message?.includes('Token') || error.message?.includes('401')) {
+        API.logout();
+        window.location.href = '/';
+      }
+    }
+  };
+
+  const loadInventory = async () => {
+    try {
+      const response = await API.getFishingInventory();
+      setInventory(response.inventory);
+      if (response.inventory?.equipped_rod) {
+        setEquippedRod(response.inventory.equipped_rod);
+      }
+    } catch (error) {
+      console.error('Error loading inventory:', error);
+    }
+  };
+
+  const loadUserRods = async () => {
+    try {
+      const response = await API.getUserRods();
+      setUserRods(response.rods || []);
+    } catch (error) {
+      console.error('Error loading user rods:', error);
+    }
+  };
+
+  const checkAFKStatus = async () => {
+    try {
+      const response = await API.getAFKStatus();
+      setIsAFKActive(response.isActive || false);
+    } catch (error) {
+      console.error('Error checking AFK status:', error);
+    }
+  };
+
+  const loadFishLogs = async () => {
+    try {
+      const response = await API.getFishingLogs();
+      setFishLogs(response.logs || []);
+      setPendingFishCount(response.pendingCount || 0);
+    } catch (error) {
+      console.error('Error loading fish logs:', error);
+    }
+  };
+
+  const claimPendingFish = async () => {
+    try {
+      const response = await API.claimPendingFish();
+      if (response.claimed && response.claimed.length > 0) {
+        console.log(`Claimed ${response.claimed.length} pending fish`);
+      }
+    } catch (error) {
+      console.error('Error claiming pending fish:', error);
+    }
+  };
+
+  const equipRod = async (rodId: string) => {
+    try {
+      await API.equipFishingRod(rodId);
+      setEquippedRod(rodId);
+      
+      if (isAFKActive) {
+        await stopAFKFishing();
+        setTimeout(() => startAFKFishing(), 500);
+      }
+    } catch (error: any) {
+      console.error('Error equipping rod:', error);
+      alert(error.message || 'Failed to equip rod');
+    }
+  };
+
+  const startAFKFishing = async () => {
+    try {
+      const response = await API.startAFKFishing(equippedRod);
+      
+      if (response.success) {
+        setIsAFKActive(true);
+      } else {
+        alert(response.message || 'Failed to start AFK fishing');
+      }
+    } catch (error: any) {
+      console.error('Error starting AFK fishing:', error);
+      alert(error.message || 'Failed to start AFK fishing');
+    }
+  };
+
+  const stopAFKFishing = async () => {
+    try {
+      const response = await API.stopAFKFishing();
+      
+      if (response.success) {
+        setIsAFKActive(false);
+      }
+    } catch (error: any) {
+      console.error('Error stopping AFK fishing:', error);
+    }
+  };
+
+  const handleConvert = async () => {
+    const amount = parseFloat(convertAmount);
+    
+    // Enhanced validation
+    if (!convertAmount || convertAmount.trim() === '') {
+      alert('Silakan masukkan jumlah yang ingin dikonversi');
+      return;
+    }
+    
+    if (isNaN(amount) || amount <= 0) {
+      alert('Jumlah harus berupa angka positif yang valid');
+      return;
+    }
+
+    const fishingSaldo = parseFloat(inventory?.fishing_saldo || '0');
+    if (amount > fishingSaldo) {
+      alert(`Saldo fishing tidak mencukupi. Tersedia: ${fishingSaldo} WL`);
+      return;
+    }
+
+    if (!confirm(`Konversi ${amount} WL dari fishing balance ke main balance?`)) {
+      return;
+    }
+
+    setIsConverting(true);
+    try {
+      const response = await API.convertFishingSaldo(amount);
+      
+      if (response.success) {
+        alert(`Berhasil mengkonversi ${amount} WL ke main balance!`);
+        setConvertAmount('');
+        await loadInventory();
+        // Refresh user data to update main balance
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Error converting saldo:', error);
+      alert(error.message || 'Gagal mengkonversi saldo');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const hasRodAccess = (rodId: string) => {
+    // EZ Rod and Basic Rod are always available
+    if (rodId === 'ez_rod' || rodId === 'basic_rod') return true;
+    // Check if user has access to premium rods
+    return userRods.some(r => r.rod_id === rodId && r.is_active);
+  };
+
+  const getRodImage = (rodId: string) => {
+    const rod = fishingData.rods.find(r => r.id === rodId);
+    return rod?.image || rod?.emoji || '🎣';
+  };
+
+  const getFishImage = (fishName: string) => {
+    const fish = fishingData.fish_types.find(f => f.name === fishName);
+    return fish?.image || fish?.emoji || '🐟';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{
+        background: "linear-gradient(rgba(10, 15, 30, 0.85), rgba(5, 8, 22, 0.95)), url('/background.png') center / cover no-repeat fixed"
+      }}>
+        {/* Ambient Water Effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#1D4ED8] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse delay-700"></div>
+        </div>
+
+        <div className="relative z-10 text-center">
+          {/* Premium Fish Loading Animation */}
+          <div className="relative w-32 h-32 mx-auto mb-8">
+            {/* Glow Effect */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] opacity-30 blur-2xl animate-pulse"></div>
+            
+            {/* Fish Image with Animation */}
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <img 
+                src="/images/orcafish.png" 
+                alt="Loading" 
+                className="w-24 h-24 object-contain animate-bounce"
+                onError={(e) => {
+                  // Fallback to emoji if image not found
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                }}
+              />
+              <div className="hidden text-6xl animate-bounce">🐟</div>
+            </div>
+            
+            {/* Water Ripples */}
+            <div className="absolute inset-0 rounded-full border-2 border-[#38BDF8]/30 animate-ping"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-[#1D4ED8]/20 animate-ping delay-150"></div>
+          </div>
+
+          {/* Loading Text */}
+          <div className="space-y-3">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-[#38BDF8] via-[#67E8F9] to-[#38BDF8] bg-clip-text text-transparent animate-pulse">
+              Loading Fishing System
+            </h2>
+            <p className="text-[#67E8F9]/70 font-medium tracking-wide text-sm">
+              Preparing your fishing adventure...
+            </p>
+            
+            {/* Loading Bar */}
+            <div className="w-64 h-1.5 mx-auto bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] rounded-full animate-[shimmer_1.5s_ease-in-out_infinite]"
+                   style={{ width: '60%' }}>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return <FishingPackages onBack={onBack} />;
+  }
+
+  return (
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: "linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 8, 22, 0.85)), url('/background.png') center / cover no-repeat fixed"
+    }}>
+      {/* Ambient Background Effects - Subtle */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#1D4ED8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse delay-700"></div>
+      </div>
+
+      {/* Main Container */}
+      <div className="relative z-10 p-6 md:p-8 lg:p-12">
+        {/* Top Navigation Bar - Liquid Glass */}
+        <div className="max-w-[1600px] mx-auto mb-8">
+          <div className="relative group">
+            {/* Glass Card */}
+            <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] shadow-2xl overflow-hidden">
+              {/* Gradient Border Glow */}
+              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#38BDF8]/20 via-[#1D4ED8]/20 to-[#38BDF8]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
+              
+              <div className="relative p-6">
+                <div className="flex items-center justify-between flex-wrap gap-6">
+                  {/* Left: Back Button & Title */}
+                  <div className="flex items-center gap-6">
+                    <button
+                      onClick={onBack}
+                      className="group/btn flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] hover:border-[#38BDF8]/50 transition-all duration-300"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-[#67E8F9] group-hover/btn:translate-x-[-2px] transition-transform" />
+                      <span className="text-white/90 font-medium">Back</span>
+                    </button>
+                    
+                    <div>
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-[#67E8F9] to-[#38BDF8] bg-clip-text text-transparent mb-1">
+                        AFK Fishing System
+                      </h1>
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-2 text-white/60">
+                          <Clock className="w-4 h-4 text-[#38BDF8]" />
+                          <span>Access: <span className="text-[#67E8F9] font-semibold">{timeRemaining}</span></span>
+                        </div>
+                        {isAFKActive && (
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-400/30">
+                            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50"></div>
+                            <span className="text-emerald-400 font-semibold text-xs tracking-wide">ACTIVE</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Stats Cards */}
+                  <div className="flex gap-4">
+                    {/* Balance Card */}
+                    <div className="relative group/stat">
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-2xl blur-lg opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                      <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-4 min-w-[140px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <TrendingUp className="w-4 h-4 text-emerald-400" />
+                          <p className="text-xs text-white/50 font-medium tracking-wide uppercase">Balance</p>
+                        </div>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                          {inventory?.fishing_saldo || 0} <span className="text-lg">WL</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Total Fish Card */}
+                    <div className="relative group/stat">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8]/20 to-[#1D4ED8]/20 rounded-2xl blur-lg opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                      <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-4 min-w-[140px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <FishIcon className="w-4 h-4 text-[#38BDF8]" />
+                          <p className="text-xs text-white/50 font-medium tracking-wide uppercase">Total Fish</p>
+                        </div>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] bg-clip-text text-transparent">
+                          {inventory?.total_fish_caught || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Bait Balance Card */}
+                    <div className="relative group/stat">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl blur-lg opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                      <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-4 min-w-[140px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Worm className="w-4 h-4 text-purple-400" />
+                          <p className="text-xs text-white/50 font-medium tracking-wide uppercase">Bait</p>
+                        </div>
+                        <p className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                          {inventory?.bait_balance || 0}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Pending Card */}
+                    {pendingFishCount > 0 && (
+                      <div className="relative group/stat">
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-2xl blur-lg opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                        <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-4 min-w-[140px]">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Activity className="w-4 h-4 text-amber-400" />
+                            <p className="text-xs text-white/50 font-medium tracking-wide uppercase">Pending</p>
+                          </div>
+                          <p className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent">
+                            {pendingFishCount}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Sidebar - Rod Selection */}
+          <div className="lg:col-span-3">
+            <div className="relative group">
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#38BDF8]/10 to-[#1D4ED8]/10 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              {/* Glass Card */}
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] p-6 shadow-2xl">
+                <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                  <div className="w-1 h-6 bg-gradient-to-b from-[#38BDF8] to-[#1D4ED8] rounded-full"></div>
+                  Select Rod
+                </h2>
+                
+                <div className="space-y-3">
+                  {fishingData.rods.map((rod) => {
+                    const hasAccess = hasRodAccess(rod.id);
+                    const isEquipped = equippedRod === rod.id;
+                    
+                    if (!hasAccess) return null;
+                    
+                    return (
+                      <button
+                        key={rod.id}
+                        onClick={() => equipRod(rod.id)}
+                        className={`group/rod relative w-full p-4 rounded-2xl border transition-all duration-300 text-left overflow-hidden ${
+                          isEquipped
+                            ? 'border-[#38BDF8]/50 bg-gradient-to-br from-[#38BDF8]/10 to-[#1D4ED8]/10'
+                            : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20'
+                        }`}
+                      >
+                        {/* Equipped Indicator Glow */}
+                        {isEquipped && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8]/20 to-[#1D4ED8]/20 blur-xl"></div>
+                        )}
+                        
+                        <div className="relative flex items-center gap-3">
+                          {/* Rod Image or Emoji */}
+                          {rod.image ? (
+                            <img 
+                              src={rod.image} 
+                              alt={rod.name}
+                              className="w-12 h-12 object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`text-3xl ${rod.image ? 'hidden' : ''}`}>{rod.emoji}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white text-sm mb-1">{rod.name}</p>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1 text-xs text-white/50">
+                                <Zap className="w-3 h-3" />
+                                <span>{rod.intervalMin/1000}-{rod.intervalMax/1000}s</span>
+                              </div>
+                            </div>
+                          </div>
+                          {isEquipped && (
+                            <div className="w-2 h-2 bg-[#38BDF8] rounded-full shadow-lg shadow-[#38BDF8]/50 animate-pulse"></div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Control Button */}
+                <div className="mt-6">
+                  {!isAFKActive ? (
+                    <button
+                      onClick={startAFKFishing}
+                      className="group/start relative w-full py-4 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {/* Animated Gradient Background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] via-[#1D4ED8] to-[#38BDF8] bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      
+                      {/* Glow Effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] blur-xl opacity-50 group-hover/start:opacity-75 transition-opacity"></div>
+                      
+                      <div className="relative flex items-center justify-center gap-2 text-white font-bold">
+                        <Play className="w-5 h-5" />
+                        <span>Start AFK Fishing</span>
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={stopAFKFishing}
+                      className="group/stop relative w-full py-4 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {/* Animated Gradient Background */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      
+                      {/* Glow Effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 blur-xl opacity-50 group-hover/stop:opacity-75 transition-opacity"></div>
+                      
+                      <div className="relative flex items-center justify-center gap-2 text-white font-bold">
+                        <Pause className="w-5 h-5" />
+                        <span>Stop AFK Fishing</span>
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                {/* Info Card */}
+                <div className="mt-6 relative group/info">
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8]/20 to-[#1D4ED8]/20 rounded-2xl blur-lg opacity-0 group-hover/info:opacity-100 transition-opacity"></div>
+                  <div className="relative backdrop-blur-xl bg-gradient-to-br from-[#38BDF8]/10 to-[#1D4ED8]/10 rounded-2xl border border-[#38BDF8]/20 p-4">
+                    <div className="flex items-start gap-3">
+                      <Waves className="w-5 h-5 text-[#38BDF8] flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[#67E8F9] font-semibold text-sm mb-1">Server-Side AFK</p>
+                        <p className="text-white/60 text-xs leading-relaxed">
+                          Close your browser safely. Fishing continues running on our servers.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Convert Saldo Card */}
+                <div className="mt-6 relative group/convert">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-2xl blur-lg opacity-0 group-hover/convert:opacity-100 transition-opacity"></div>
+                  <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-5 h-5 text-emerald-400" />
+                      <p className="text-white font-semibold text-sm">Convert to Main Balance</p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-white/60 mb-1 block">Amount (WL)</label>
+                        <input
+                          type="number"
+                          value={convertAmount}
+                          onChange={(e) => setConvertAmount(e.target.value)}
+                          placeholder="Enter amount"
+                          className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-white text-sm focus:outline-none focus:border-emerald-400/50 transition-colors"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={handleConvert}
+                        disabled={isConverting || !convertAmount || parseFloat(convertAmount) <= 0}
+                        className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-bold text-sm transition-all flex items-center justify-center gap-2"
+                      >
+                        {isConverting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <span>Converting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <TrendingUp className="w-4 h-4" />
+                            <span>Convert Now</span>
+                          </>
+                        )}
+                      </button>
+                      
+                      <p className="text-xs text-white/50 text-center">
+                        Available: {inventory?.fishing_saldo || 0} WL
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center & Right - Animation & Logs */}
+          <div className="lg:col-span-9 space-y-4">
+            {/* Character Animation Section - Smaller */}
+            <div className="relative group">
+              {/* Ambient Glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#38BDF8]/10 via-[#1D4ED8]/10 to-transparent rounded-3xl blur-3xl opacity-50"></div>
+              
+              {/* Glass Card - Reduced Padding */}
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] p-6 shadow-2xl overflow-hidden">
+                {/* Animated Water Effect Background */}
+                <div className="absolute inset-0 opacity-5">
+                  <div className="absolute inset-0 bg-gradient-to-b from-[#38BDF8]/20 via-transparent to-[#1D4ED8]/20 animate-pulse"></div>
+                </div>
+                
+                <div className="relative flex flex-col items-center justify-center">
+                  {/* Character Animation - Smaller Size (scale-50) */}
+                  <div className="mb-4 relative scale-50">
+                    {/* Glow Ring */}
+                    {isAFKActive && (
+                      <div className="absolute inset-0 -m-4 rounded-full bg-gradient-to-r from-[#38BDF8]/20 to-[#1D4ED8]/20 blur-lg animate-pulse"></div>
+                    )}
+                    <FishingCharacterAnimation isActive={isAFKActive} className="relative z-10" />
+                  </div>
+                  
+                  {/* Status Display - Compact */}
+                  <div className="text-center space-y-2">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-white via-[#67E8F9] to-white bg-clip-text text-transparent">
+                      {isAFKActive ? 'Fishing Active' : 'Ready to Fish'}
+                    </h2>
+                    
+                    <div className="flex items-center justify-center gap-2 text-white/60">
+                      <Zap className="w-3 h-3 text-[#38BDF8]" />
+                      <span className="text-xs">
+                        Using: <span className="text-white font-semibold">{fishingData.rods.find(r => r.id === equippedRod)?.name}</span>
+                      </span>
+                    </div>
+                    
+                    {isAFKActive && (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-xl bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-400/20">
+                        <div className="relative">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                          <div className="absolute inset-0 w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+                        </div>
+                        <span className="text-emerald-400 font-semibold text-xs tracking-wide">Server-side active</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fish Logs Table - Liquid Glass */}
+            <div className="relative group">
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#38BDF8]/10 to-[#1D4ED8]/10 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              {/* Glass Card */}
+              <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] shadow-2xl overflow-hidden">
+                {/* Header - Compact */}
+                <div className="p-4 border-b border-white/[0.08]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#38BDF8]/20 to-[#1D4ED8]/20 flex items-center justify-center">
+                        <FishIcon className="w-4 h-4 text-[#38BDF8]" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-white">Recent Catches</h2>
+                        <p className="text-xs text-white/50">Live fishing activity</p>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08]">
+                      <span className="text-xs text-white/60">Last 10</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table Content - Compact */}
+                <div className="p-4">
+                  {fishLogs.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] flex items-center justify-center">
+                        <FishIcon className="w-8 h-8 text-white/20" />
+                      </div>
+                      <p className="text-white/60 font-medium mb-1 text-sm">No fish caught yet</p>
+                      <p className="text-white/40 text-xs">Start AFK fishing to begin</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      {fishLogs.map((log, index) => (
+                        <div
+                          key={log.id || index}
+                          className="group/row relative backdrop-blur-xl bg-gradient-to-r from-white/[0.03] to-white/[0.01] hover:from-white/[0.08] hover:to-white/[0.04] rounded-xl border border-white/[0.05] hover:border-white/[0.15] p-3 transition-all duration-300"
+                        >
+                          {/* Hover Glow */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8]/0 to-[#1D4ED8]/0 group-hover/row:from-[#38BDF8]/5 group-hover/row:to-[#1D4ED8]/5 rounded-xl transition-all duration-300"></div>
+                          
+                          <div className="relative flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {/* Fish Image - Main Icon */}
+                              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white/[0.08] to-white/[0.02] flex items-center justify-center overflow-hidden border border-white/[0.05]">
+                                {(() => {
+                                  const fishData = fishingData.fish_types.find(f => f.name === log.fish_name);
+                                  if (fishData?.image) {
+                                    return (
+                                      <img 
+                                        src={fishData.image} 
+                                        alt={fishData.name}
+                                        className="w-10 h-10 object-contain"
+                                        onError={(e) => {
+                                          e.currentTarget.style.display = 'none';
+                                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                        }}
+                                      />
+                                    );
+                                  }
+                                  return <span className="text-2xl">{fishData?.emoji || '🐟'}</span>;
+                                })()}
+                                <span className="hidden text-2xl">{fishingData.fish_types.find(f => f.name === log.fish_name)?.emoji || '🐟'}</span>
+                              </div>
+                              
+                              {/* Fish Info - Compact */}
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="font-bold text-white text-sm">{log.fish_name}</p>
+                                  {/* Rod Icon - Small Badge */}
+                                  <div className="w-6 h-6 rounded bg-white/[0.05] flex items-center justify-center">
+                                    {(() => {
+                                      const rodData = fishingData.rods.find(r => r.id === log.rod_used);
+                                      if (rodData?.image) {
+                                        return (
+                                          <img 
+                                            src={rodData.image} 
+                                            alt={rodData.name}
+                                            className="w-4 h-4 object-contain"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                            }}
+                                          />
+                                        );
+                                      }
+                                      return <span className="text-xs">{rodData?.emoji || '🎣'}</span>;
+                                    })()}
+                                    <span className="hidden text-xs">{fishingData.rods.find(r => r.id === log.rod_used)?.emoji || '🎣'}</span>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-white/50">
+                                  {new Date(log.caught_at).toLocaleTimeString('id-ID', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Stats - Compact */}
+                            <div className="flex items-center gap-4">
+                              {/* LB */}
+                              <div className="text-right">
+                                <p className="text-xs text-white/50 mb-0.5">Weight</p>
+                                <p className="text-lg font-bold bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] bg-clip-text text-transparent">
+                                  {log.final_lb} LB
+                                </p>
+                              </div>
+                              
+                              {/* Price */}
+                              <div className="text-right min-w-[80px]">
+                                <p className="text-xs text-white/50 mb-0.5">Earned</p>
+                                <p className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                                  +{log.sell_price} WL
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Fishing Packages Component - Liquid Glass Design
+function FishingPackages({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="min-h-screen relative overflow-hidden" style={{
+      background: "linear-gradient(rgba(10, 15, 30, 0.75), rgba(5, 8, 22, 0.85)), url('/background.png') center / cover no-repeat fixed"
+    }}>
+      {/* Ambient Background Effects - Subtle */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#1D4ED8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse delay-700"></div>
+      </div>
+
+      <div className="relative z-10 p-6 md:p-12">
+        <div className="max-w-6xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={onBack}
+            className="group/btn flex items-center gap-2 px-4 py-2 mb-8 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] hover:border-[#38BDF8]/50 transition-all duration-300"
+          >
+            <ChevronLeft className="w-5 h-5 text-[#67E8F9] group-hover/btn:translate-x-[-2px] transition-transform" />
+            <span className="text-white/90 font-medium">Back</span>
+          </button>
+
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-white via-[#67E8F9] to-white bg-clip-text text-transparent mb-4">
+              AFK Fishing Packages
+            </h1>
+            <p className="text-white/60 text-lg">Choose the perfect plan for your fishing journey</p>
+          </div>
+
+          {/* Packages Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {fishingData.packages.map((pkg: any) => (
+              <div
+                key={pkg.id}
+                className={`relative group ${pkg.popular ? 'md:-mt-4 md:mb-4' : ''}`}
+              >
+                {/* Popular Badge */}
+                {pkg.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] blur-lg opacity-75"></div>
+                      <div className="relative px-6 py-2 rounded-full bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8]">
+                        <span className="text-xs font-bold text-white tracking-wider">MOST POPULAR</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Glow Effect */}
+                <div className={`absolute inset-0 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                  pkg.popular 
+                    ? 'bg-gradient-to-br from-[#38BDF8]/20 to-[#1D4ED8]/20' 
+                    : 'bg-gradient-to-br from-white/10 to-white/5'
+                }`}></div>
+
+                {/* Glass Card */}
+                <div className={`relative backdrop-blur-xl rounded-3xl border shadow-2xl overflow-hidden transition-all duration-300 ${
+                  pkg.popular
+                    ? 'bg-gradient-to-br from-white/[0.12] to-white/[0.06] border-[#38BDF8]/30 group-hover:border-[#38BDF8]/50'
+                    : 'bg-gradient-to-br from-white/[0.08] to-white/[0.02] border-white/[0.08] group-hover:border-white/20'
+                }`}>
+                  <div className="p-8">
+                    {/* Icon */}
+                    <div className="text-7xl mb-6 text-center">{pkg.badge}</div>
+                    
+                    {/* Package Name */}
+                    <h3 className="text-2xl font-bold text-white text-center mb-4">{pkg.name}</h3>
+                    
+                    {/* Duration */}
+                    <div className="text-center mb-6">
+                      <p className="text-5xl font-black bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] bg-clip-text text-transparent">
+                        {pkg.duration_days}
+                      </p>
+                      <p className="text-white/60 text-sm mt-1">Days of Access</p>
+                    </div>
+                    
+                    {/* Description */}
+                    <p className="text-white/60 text-center text-sm mb-8 leading-relaxed">{pkg.description}</p>
+                    
+                    {/* CTA Button */}
+                    <button 
+                      onClick={() => window.open(fishingData.admin_contact.discord, '_blank')}
+                      className="group/cta relative w-full py-4 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] via-[#1D4ED8] to-[#38BDF8] bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]"></div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] blur-xl opacity-50 group-hover/cta:opacity-75 transition-opacity"></div>
+                      
+                      <div className="relative flex items-center justify-center gap-2 text-white font-bold">
+                        <span>Contact Admin</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Info Card */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            
+            <div className="relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] p-8">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">📞</span>
+                </div>
+                
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-4">How to Purchase</h3>
+                  <div className="space-y-3 text-white/70">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-[#38BDF8]">1</span>
+                      </div>
+                      <p>Contact Admin: <span className="font-bold text-white">{fishingData.admin_contact.name}</span></p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-[#38BDF8]">2</span>
+                      </div>
+                      <p>Discord: <span className="font-bold text-[#38BDF8]">{fishingData.admin_contact.discord}</span></p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-lg bg-white/[0.05] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-[#38BDF8]">3</span>
+                      </div>
+                      <p>After payment, admin will activate your access immediately</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

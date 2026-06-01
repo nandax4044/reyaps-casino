@@ -514,6 +514,16 @@ export default async function handler(req: any, res: any) {
         }
         return res.status(400).json({ error: 'Config data required' });
       }
+
+      // Fishing admin endpoints
+      if (path === '/admin/fishing/grant-bait' && method === 'POST') {
+        return await handleGrantBait(user.id, body, res);
+      }
+
+      if (path.match(/\/admin\/fishing\/user-inventory\/[^/]+$/) && method === 'GET') {
+        const userId = path.split('/').pop();
+        return await handleGetFishingInventory(userId, res);
+      }
     }
 
     // Chat post (requires auth)
@@ -1287,4 +1297,62 @@ async function handleOnlineUsers(res: any) {
 
   // Fallback to mock data
   return res.json({ players: mockPlayers, onlineCount: mockPlayers.length });
+}
+
+
+// ─── FISHING ADMIN HANDLERS ────────────────────────────────────────────────────
+
+async function handleGrantBait(adminId: string, body: any, res: any) {
+  const { user_id, amount, notes } = body;
+
+  if (!user_id || !amount) {
+    return res.status(400).json({ error: 'Missing required fields: user_id and amount' });
+  }
+
+  if (amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than 0' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Call grant_bait function
+      const { data, error } = await supabaseAdmin.rpc('grant_bait', {
+        p_user_id: user_id,
+        p_amount: amount,
+        p_granted_by: adminId,
+        p_notes: notes || null
+      });
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Granted ${amount} bait to user ${user_id}, new balance: ${data}`);
+      return res.json({ success: true, new_balance: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Grant bait error:', error);
+      return res.status(500).json({ error: 'Failed to grant bait: ' + error.message });
+    }
+  } else {
+    return res.json({ success: true, new_balance: amount });
+  }
+}
+
+async function handleGetFishingInventory(userId: string, res: any) {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return res.json({ success: true, inventory: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Get user inventory error:', error);
+      return res.status(500).json({ error: 'Failed to get user inventory' });
+    }
+  } else {
+    return res.json({ success: true, inventory: { bait_balance: 0 } });
+  }
 }

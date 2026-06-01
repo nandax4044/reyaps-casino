@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 
 // Suppress benign Dev WebSocket and HMR errors that occur when HMR is disabled or sandboxed
 if (typeof window !== 'undefined') {
@@ -35,6 +36,8 @@ if (typeof window !== 'undefined') {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

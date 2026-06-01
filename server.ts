@@ -1,14 +1,39 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 
-import caseOpeningDefault from './src/data/case_opening.json' assert { type: 'json' };
-import permainanDefault from './src/data/permainan.json' assert { type: 'json' };
+import caseOpeningDefault from './src/data/case_opening.json' with { type: 'json' };
+import permainanDefault from './src/data/permainan.json' with { type: 'json' };
 
 const app = express();
 const PORT = 3000;
+
+// CORS Middleware for production safety
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    process.env.FRONTEND_URL || ''
+  ].filter(Boolean);
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
 
 app.use(express.json());
 
@@ -281,16 +306,28 @@ app.post('/api/auth/login', async (req, res) => {
 
       // If loginKey doesn't look like an email, look up by username
       if (!slugKey.includes('@')) {
+        console.log('[LOGIN] Looking up user by username:', slugKey);
+        
         const { data: foundUser, error: findError } = await supabase
           .from('users')
           .select('email')
           .eq('username', slugKey)
           .maybeSingle();
 
-        if (findError || !foundUser) {
-          return res.status(400).json({ error: 'Akun tidak ditemukan!' });
+        if (findError) {
+          console.error('[LOGIN] Database error finding user:', findError);
+          return res.status(400).json({ error: 'Database error: ' + findError.message });
         }
 
+        if (!foundUser) {
+          console.error('[LOGIN] User not found in database:', slugKey);
+          return res.status(400).json({ 
+            error: 'Akun tidak ditemukan! Pastikan username sudah terdaftar.',
+            debug: { username: slugKey, hint: 'Run COMPLETE_FIX.sql in Supabase' }
+          });
+        }
+
+        console.log('[LOGIN] Found user email:', foundUser.email);
         loginEmail = foundUser.email;
       }
 
@@ -350,6 +387,44 @@ app.post('/api/auth/login', async (req, res) => {
 
     const { password: _, ...safeUser } = user;
     return res.json({ success: true, user: safeUser, token: user.id });
+  }
+});
+
+// ─── REFRESH TOKEN ─────────────────────────────────────────────────────────────
+// Refresh the user's session token without requiring re-login
+app.post('/api/auth/refresh', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const oldToken = authHeader.split(' ')[1];
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // Try to refresh the session using the old token
+      const { data, error } = await supabase.auth.refreshSession({
+        refresh_token: oldToken
+      });
+
+      if (error || !data?.session) {
+        return res.status(401).json({ 
+          error: 'Token sudah kadaluarsa. Silakan login ulang.',
+          needsLogin: true 
+        });
+      }
+
+      return res.json({
+        success: true,
+        token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: 'Refresh failed: ' + e.message });
+    }
+  } else {
+    // Local memory mode - tokens don't expire
+    return res.json({ success: true, token: oldToken });
   }
 });
 
@@ -914,6 +989,1009 @@ app.get('/api/users/online', async (req, res) => {
   res.json({ onlineCount: mappedRealUsers.length + virtualUsers.length, players: [...mappedRealUsers, ...virtualUsers] });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FISHING ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Check if user has active fishing access
+app.get('/api/fishing/check-access', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('afk_access')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('feature', 'fishing')
+        .eq('is_active', true)
+        .gte('expires_at', new Date().toISOString())
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return res.json({
+        hasAccess: !!data,
+        access: data
+      });
+    } catch (error: any) {
+      console.error('[FISHING] Check access error:', error);
+      return res.status(500).json({ error: 'Failed to check access' });
+    }
+  }
+
+  // Local fallback - no access in local mode
+  res.json({ hasAccess: false, access: null });
+});
+
+// Get user fishing inventory
+app.get('/api/fishing/inventory', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('user_fishing_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      // If no inventory, create one
+      if (!data) {
+        const { data: newInventory, error: insertError } = await supabase
+          .from('user_fishing_inventory')
+          .insert({ user_id: userId })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return res.json({ inventory: newInventory });
+      }
+
+      return res.json({ inventory: data });
+    } catch (error: any) {
+      console.error('[FISHING] Get inventory error:', error);
+      return res.status(500).json({ error: 'Failed to get inventory' });
+    }
+  }
+
+  // Local fallback
+  res.json({
+    inventory: {
+      user_id: userId,
+      equipped_rod: null,
+      fishing_gems: 0,
+      fishing_saldo: 0,
+      total_fish_caught: 0
+    }
+  });
+});
+
+// Equip rod
+app.post('/api/fishing/equip-rod', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+  const { rod } = req.body;
+
+  const validRods = ['ez_rod', 'basic_rod', 'thanksgiving_rod', 'golden_rod', 'lico_rod'];
+  if (!validRods.includes(rod)) {
+    return res.status(400).json({ error: 'Invalid rod. Valid rods: ez_rod, basic_rod, lico_rod, golden_rod, thanksgiving_rod' });
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase.rpc('update_equipped_rod', {
+        p_user_id: userId,
+        p_rod: rod
+      });
+
+      if (error) throw error;
+
+      return res.json({ success: true, equipped_rod: rod });
+    } catch (error: any) {
+      console.error('[FISHING] Equip rod error:', error);
+      return res.status(500).json({ error: 'Failed to equip rod' });
+    }
+  }
+
+  res.json({ success: true, equipped_rod: rod });
+});
+
+// Catch fish (save or sell)
+app.post('/api/fishing/catch-fish', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+  const { fish_id, fish_name, lb, is_perfect, action } = req.body;
+
+  if (!fish_id || !fish_name || !lb || !action) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (!['save', 'sell'].includes(action)) {
+    return res.status(400).json({ error: 'Invalid action' });
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const sellPrice = lb * 10;
+      const isSold = action === 'sell';
+
+      // Insert fish to inventory
+      const { error: fishError } = await supabase
+        .from('fish_inventory')
+        .insert({
+          user_id: userId,
+          fish_id,
+          fish_name,
+          lb,
+          is_perfect: is_perfect || false,
+          is_sold: isSold,
+          sell_price: isSold ? sellPrice : 0,
+          sold_at: isSold ? new Date().toISOString() : null
+        });
+
+      if (fishError) throw fishError;
+
+      // Increment total fish caught
+      await supabase.rpc('increment_fish_caught', { p_user_id: userId });
+
+      // If selling, add to saldo
+      if (isSold) {
+        await supabase.rpc('increment_fishing_saldo', {
+          p_user_id: userId,
+          p_amount: sellPrice
+        });
+      }
+
+      return res.json({
+        success: true,
+        action,
+        sell_price: isSold ? sellPrice : 0
+      });
+    } catch (error: any) {
+      console.error('[FISHING] Catch fish error:', error);
+      return res.status(500).json({ error: 'Failed to catch fish' });
+    }
+  }
+
+  res.json({ success: true, action });
+});
+
+// Get fish inventory
+app.get('/api/fishing/fish-inventory', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('fish_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_sold', false)
+        .order('caught_at', { ascending: false });
+
+      if (error) throw error;
+
+      return res.json({ fish: data || [] });
+    } catch (error: any) {
+      console.error('[FISHING] Get fish inventory error:', error);
+      return res.status(500).json({ error: 'Failed to get fish inventory' });
+    }
+  }
+
+  res.json({ fish: [] });
+});
+
+// Get fishing logs (history of all fish caught and sold)
+app.get('/api/fishing/logs', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // Get all fish records for the user
+      const { data: fishRecords, error: fishError } = await supabase
+        .from('fish_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .order('caught_at', { ascending: false })
+        .limit(100);
+
+      if (fishError) throw fishError;
+
+      // Calculate statistics
+      const totalCaught = fishRecords?.length || 0;
+      const totalSold = fishRecords?.filter(f => f.is_sold).length || 0;
+      const totalUnsold = fishRecords?.filter(f => !f.is_sold).length || 0;
+      const totalValue = fishRecords?.reduce((sum, f) => sum + (f.sell_price || 0), 0) || 0;
+
+      // Group by fish name
+      const fishByType: Record<string, { count: number; totalLb: number; totalValue: number }> = {};
+      fishRecords?.forEach(fish => {
+        if (!fishByType[fish.fish_name]) {
+          fishByType[fish.fish_name] = { count: 0, totalLb: 0, totalValue: 0 };
+        }
+        fishByType[fish.fish_name].count++;
+        fishByType[fish.fish_name].totalLb += fish.lb;
+        fishByType[fish.fish_name].totalValue += fish.sell_price || 0;
+      });
+
+      return res.json({
+        logs: fishRecords || [],
+        statistics: {
+          totalCaught,
+          totalSold,
+          totalUnsold,
+          totalValue,
+          fishByType
+        }
+      });
+    } catch (error: any) {
+      console.error('[FISHING] Get fishing logs error:', error);
+      return res.status(500).json({ error: 'Failed to get fishing logs' });
+    }
+  }
+
+  res.json({
+    logs: [],
+    statistics: {
+      totalCaught: 0,
+      totalSold: 0,
+      totalUnsold: 0,
+      totalValue: 0,
+      fishByType: {}
+    }
+  });
+});
+
+// Sell single fish from inventory
+app.post('/api/fishing/sell-fish', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+  const { fish_id } = req.body;
+
+  if (!fish_id) {
+    return res.status(400).json({ error: 'Missing fish_id' });
+  }
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // Get fish data
+      const { data: fish, error: fetchError } = await supabase
+        .from('fish_inventory')
+        .select('*')
+        .eq('id', fish_id)
+        .eq('user_id', userId)
+        .eq('is_sold', false)
+        .single();
+
+      if (fetchError || !fish) {
+        return res.status(404).json({ error: 'Fish not found' });
+      }
+
+      const sellPrice = fish.lb * 10;
+
+      // Update fish as sold
+      const { error: updateError } = await supabase
+        .from('fish_inventory')
+        .update({
+          is_sold: true,
+          sell_price: sellPrice,
+          sold_at: new Date().toISOString()
+        })
+        .eq('id', fish_id);
+
+      if (updateError) throw updateError;
+
+      // Add to saldo
+      await supabase.rpc('increment_fishing_saldo', {
+        p_user_id: userId,
+        p_amount: sellPrice
+      });
+
+      return res.json({ success: true, sell_price: sellPrice });
+    } catch (error: any) {
+      console.error('[FISHING] Sell fish error:', error);
+      return res.status(500).json({ error: 'Failed to sell fish' });
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// Sell all fish from inventory
+app.post('/api/fishing/sell-all-fish', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // Get all unsold fish
+      const { data: fishList, error: fetchError } = await supabase
+        .from('fish_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_sold', false);
+
+      if (fetchError) throw fetchError;
+
+      if (!fishList || fishList.length === 0) {
+        return res.json({ success: true, total_sold: 0, total_price: 0 });
+      }
+
+      // Calculate total price
+      const totalPrice = fishList.reduce((sum, fish) => sum + (fish.lb * 10), 0);
+
+      // Update all fish as sold (set sell_price individually)
+      const updatePromises = fishList.map(fish => 
+        supabase
+          .from('fish_inventory')
+          .update({
+            is_sold: true,
+            sell_price: fish.lb * 10,
+            sold_at: new Date().toISOString()
+          })
+          .eq('id', fish.id)
+      );
+
+      await Promise.all(updatePromises);
+
+      // Add to saldo
+      await supabase.rpc('increment_fishing_saldo', {
+        p_user_id: userId,
+        p_amount: totalPrice
+      });
+
+      return res.json({
+        success: true,
+        total_sold: fishList.length,
+        total_price: totalPrice
+      });
+    } catch (error: any) {
+      console.error('[FISHING] Sell all fish error:', error);
+      return res.status(500).json({ error: 'Failed to sell all fish' });
+    }
+  }
+
+  res.json({ success: true, total_sold: 0, total_price: 0 });
+});
+
+// Admin: Grant fishing access
+app.post('/api/admin/fishing/grant-access', authenticateUser, verifyStaff, async (req, res) => {
+  const adminId = req.body._user.id;
+  const { user_id, duration_days } = req.body;
+
+  if (!user_id || !duration_days) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + duration_days);
+
+      // Check if user exists
+      const { data: userExists } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('id', user_id)
+        .single();
+
+      if (!userExists) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Upsert access (update if exists, insert if not)
+      const { data, error } = await supabaseAdmin
+        .from('afk_access')
+        .upsert({
+          user_id,
+          feature: 'fishing',
+          is_active: true,
+          expires_at: expiresAt.toISOString(),
+          granted_by: adminId,
+          granted_at: new Date().toISOString(),
+          notes: `${duration_days} days access`
+        }, {
+          onConflict: 'user_id,feature'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[ADMIN] Grant fishing access error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to grant access' });
+      }
+
+      console.log('[ADMIN] Fishing access granted:', user_id, duration_days, 'days');
+      return res.json({ success: true, access: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Grant fishing access error:', error);
+      return res.status(500).json({ error: error.message || 'Failed to grant access' });
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// Admin: Get all fishing access list
+app.get('/api/admin/fishing/access-list', authenticateUser, verifyStaff, async (req, res) => {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('afk_access')
+        .select('*')
+        .eq('feature', 'fishing')
+        .order('granted_at', { ascending: false });
+
+      if (error) throw error;
+
+      return res.json({ success: true, access: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get fishing access list error:', error);
+      return res.status(500).json({ error: 'Failed to get access list' });
+    }
+  }
+
+  res.json({ success: true, access: [] });
+});
+
+// ─── AFK FISHING WORKER ENDPOINTS ──────────────────────────────────────────────
+
+// Import AFK fishing worker
+import { startAFKFishing, stopAFKFishing, getAFKStatus, getAllActiveFishers } from './afk-fishing-worker.js';
+
+// Start AFK fishing (server-side bot)
+app.post('/api/fishing/afk/start', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+  const username = req.body._user.username;
+  const { rod } = req.body;
+
+  if (!rod) {
+    return res.status(400).json({ error: 'Missing rod parameter' });
+  }
+
+  try {
+    const result = await startAFKFishing(userId, username, rod);
+    res.json(result);
+  } catch (error: any) {
+    console.error('[AFK-FISHING] Start error:', error);
+    res.status(500).json({ error: 'Failed to start AFK fishing' });
+  }
+});
+
+// Stop AFK fishing
+app.post('/api/fishing/afk/stop', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  try {
+    const result = await stopAFKFishing(userId);
+    res.json(result);
+  } catch (error: any) {
+    console.error('[AFK-FISHING] Stop error:', error);
+    res.status(500).json({ error: 'Failed to stop AFK fishing' });
+  }
+});
+
+// Get AFK fishing status
+app.get('/api/fishing/afk/status', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  try {
+    const status = getAFKStatus(userId);
+    res.json(status);
+  } catch (error: any) {
+    console.error('[AFK-FISHING] Status error:', error);
+    res.status(500).json({ error: 'Failed to get AFK status' });
+  }
+});
+
+// Get fishing logs (recent catches)
+app.get('/api/fishing/logs', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Get recent 10 fish logs
+      const { data: logs, error } = await supabaseAdmin
+        .from('fishing_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('caught_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      // Get pending fish count
+      const { data: pendingCount } = await supabaseAdmin
+        .rpc('get_pending_fish_count', { p_user_id: userId });
+
+      res.json({ logs: logs || [], pendingCount: pendingCount || 0 });
+    } catch (error: any) {
+      console.error('[FISHING] Get logs error:', error);
+      res.status(500).json({ error: 'Failed to get fishing logs' });
+    }
+  } else {
+    res.json({ logs: [], pendingCount: 0 });
+  }
+});
+
+// Claim pending fish - DEPRECATED (fish are auto-claimed now)
+app.post('/api/fishing/claim-pending', authenticateUser, async (req, res) => {
+  // Fish are automatically added to logs, no need to claim
+  res.json({ success: true, claimed: [] });
+});
+
+// Admin: Get all active fishers
+app.get('/api/admin/fishing/active', authenticateUser, verifyStaff, async (req, res) => {
+  try {
+    const fishers = getAllActiveFishers();
+    res.json({ fishers });
+  } catch (error: any) {
+    console.error('[AFK-FISHING] Get active fishers error:', error);
+    res.status(500).json({ error: 'Failed to get active fishers' });
+  }
+});
+
+// Admin: Revoke fishing access
+app.post('/api/admin/fishing/revoke-access', authenticateUser, verifyStaff, async (req, res) => {
+  const { access_id } = req.body;
+
+  if (!access_id) {
+    return res.status(400).json({ error: 'Missing access_id' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('afk_access')
+        .update({ is_active: false })
+        .eq('id', access_id);
+
+      if (error) throw error;
+
+      return res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Revoke fishing access error:', error);
+      return res.status(500).json({ error: 'Failed to revoke access' });
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// ─── FISHING V2: USER ROD ACCESS ────────────────────────────────────────────
+
+// Get user's available rods
+app.get('/api/fishing/user-rods', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Get user's rod access
+      const { data: rodAccess, error } = await supabaseAdmin
+        .from('user_rod_access')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      // Basic rod is always available
+      const rods = [
+        {
+          rod_id: 'basic_rod',
+          rod_name: 'Basic Rod',
+          is_active: true,
+          granted_at: new Date().toISOString()
+        },
+        ...(rodAccess || []).map(r => ({
+          rod_id: r.rod_id,
+          rod_name: r.rod_id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          is_active: r.is_active,
+          granted_at: r.granted_at
+        }))
+      ];
+
+      res.json({ rods });
+    } catch (error: any) {
+      console.error('[FISHING] Get user rods error:', error);
+      res.status(500).json({ error: 'Failed to get user rods' });
+    }
+  } else {
+    // Default: only basic rod
+    res.json({ rods: [{ rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true }] });
+  }
+});
+
+// ─── FISHING V2: CONVERT SALDO ──────────────────────────────────────────────
+
+// Convert fishing_saldo to main balance
+app.post('/api/fishing/convert-saldo', authenticateUser, async (req, res) => {
+  const userId = req.body._user.id;
+  const { amount } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Get current fishing inventory
+      const { data: inventory, error: invError } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .select('fishing_saldo')
+        .eq('user_id', userId)
+        .single();
+
+      if (invError) throw invError;
+
+      const currentFishingSaldo = parseFloat(inventory?.fishing_saldo || '0');
+
+      if (currentFishingSaldo < amount) {
+        return res.status(400).json({ error: 'Insufficient fishing balance' });
+      }
+
+      // Deduct from fishing_saldo
+      const { error: deductError } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .update({ 
+          fishing_saldo: currentFishingSaldo - amount 
+        })
+        .eq('user_id', userId);
+
+      if (deductError) throw deductError;
+
+      // Add to main balance
+      const { data: user, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('balance')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
+      const currentBalance = parseFloat(user?.balance || '0');
+      const newBalance = currentBalance + amount;
+
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({ balance: newBalance })
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      console.log(`[FISHING] User ${userId} converted ${amount} WL from fishing to main balance`);
+
+      res.json({ 
+        success: true, 
+        fishing_saldo: currentFishingSaldo - amount,
+        main_balance: newBalance,
+        converted_amount: amount
+      });
+    } catch (error: any) {
+      console.error('[FISHING] Convert saldo error:', error);
+      res.status(500).json({ error: 'Failed to convert saldo' });
+    }
+  } else {
+    res.status(500).json({ error: 'Database not configured' });
+  }
+});
+
+// ─── FISHING V2: ADMIN ROD MANAGEMENT ───────────────────────────────────────
+
+// Get user's rod access (admin)
+app.get('/api/admin/fishing/user-rods/:userId', authenticateUser, verifyStaff, async (req, res) => {
+  const { userId } = req.params;
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_rod_access')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      res.json({ rods: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get user rod access error:', error);
+      res.status(500).json({ error: 'Failed to get user rod access' });
+    }
+  } else {
+    res.json({ rods: [] });
+  }
+});
+
+// Grant rod access to user
+app.post('/api/admin/fishing/grant-rod', authenticateUser, verifyStaff, async (req, res) => {
+  const adminId = req.body._user.id;
+  const { user_id, rod_id, notes } = req.body;
+
+  if (!user_id || !rod_id) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Validate rod_id
+  const validRods = ['ez_rod', 'basic_rod', 'lico_rod', 'golden_rod', 'thanksgiving_rod'];
+  if (!validRods.includes(rod_id)) {
+    return res.status(400).json({ error: 'Invalid rod_id. Valid rods: ez_rod, basic_rod, lico_rod, golden_rod, thanksgiving_rod' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Use upsert to handle existing records
+      const { data, error } = await supabaseAdmin
+        .from('user_rod_access')
+        .upsert({
+          user_id,
+          rod_id,
+          granted_by: adminId,
+          granted_at: new Date().toISOString(),
+          is_active: true,
+          notes
+        }, {
+          onConflict: 'user_id,rod_id'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Granted ${rod_id} to user ${user_id}`);
+      res.json({ success: true, rod: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Grant rod error:', error);
+      res.status(500).json({ error: 'Failed to grant rod access' });
+    }
+  } else {
+    res.json({ success: true });
+  }
+});
+
+// Revoke rod access from user
+app.post('/api/admin/fishing/revoke-rod', authenticateUser, verifyStaff, async (req, res) => {
+  const { user_id, rod_id } = req.body;
+
+  if (!user_id || !rod_id) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { error } = await supabaseAdmin
+        .from('user_rod_access')
+        .update({ is_active: false })
+        .eq('user_id', user_id)
+        .eq('rod_id', rod_id);
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Revoked ${rod_id} from user ${user_id}`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Revoke rod error:', error);
+      res.status(500).json({ error: 'Failed to revoke rod access' });
+    }
+  } else {
+    res.json({ success: true });
+  }
+});
+
+// Grant bait to user
+app.post('/api/admin/fishing/grant-bait', authenticateUser, verifyStaff, async (req, res) => {
+  console.log('[ADMIN] Grant bait endpoint called');
+  const adminId = req.body._user.id;
+  const { user_id, amount, notes } = req.body;
+
+  console.log('[ADMIN] Grant bait request:', { user_id, amount, notes, adminId });
+
+  if (!user_id || !amount) {
+    return res.status(400).json({ error: 'Missing required fields: user_id and amount' });
+  }
+
+  if (amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than 0' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      console.log('[ADMIN] ═══════════════════════════════════════════════════');
+      console.log('[ADMIN] Grant Bait Request Started');
+      console.log('[ADMIN] User ID:', user_id);
+      console.log('[ADMIN] Amount:', amount);
+      console.log('[ADMIN] Admin ID:', adminId);
+      console.log('[ADMIN] Notes:', notes || 'none');
+      console.log('[ADMIN] ═══════════════════════════════════════════════════');
+      
+      // Check if user_fishing_inventory exists first
+      const { data: existingInventory, error: checkError } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .select('*')
+        .eq('user_id', user_id)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error('[ADMIN] Error checking existing inventory:', checkError);
+      } else {
+        console.log('[ADMIN] Existing inventory:', existingInventory);
+      }
+      
+      console.log('[ADMIN] Calling grant_bait RPC...');
+      
+      // Call grant_bait function
+      const { data, error } = await supabaseAdmin.rpc('grant_bait', {
+        p_user_id: user_id,
+        p_amount: amount,
+        p_granted_by: adminId,
+        p_notes: notes || null
+      });
+
+      if (error) {
+        console.error('[ADMIN] ❌ Grant bait RPC error:', error);
+        console.error('[ADMIN] Error code:', error.code);
+        console.error('[ADMIN] Error message:', error.message);
+        console.error('[ADMIN] Error details:', error.details);
+        console.error('[ADMIN] Error hint:', error.hint);
+        throw error;
+      }
+
+      console.log('[ADMIN] ✅ Grant bait RPC success! New balance:', data);
+      
+      // Verify the update
+      const { data: verifyData, error: verifyError } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .select('*')
+        .eq('user_id', user_id)
+        .single();
+      
+      if (verifyError) {
+        console.error('[ADMIN] ❌ Verification error:', verifyError);
+      } else {
+        console.log('[ADMIN] ✅ Verified inventory:', verifyData);
+        console.log('[ADMIN] ✅ Bait balance:', verifyData.bait_balance);
+      }
+      
+      console.log('[ADMIN] ═══════════════════════════════════════════════════');
+      console.log('[ADMIN] Grant Bait Completed Successfully!');
+      console.log('[ADMIN] ═══════════════════════════════════════════════════');
+      
+      res.json({ success: true, new_balance: data });
+    } catch (error: any) {
+      console.error('[ADMIN] ❌❌❌ Grant bait error:', error);
+      console.error('[ADMIN] Error stack:', error.stack);
+      res.status(500).json({ error: 'Failed to grant bait: ' + error.message });
+    }
+  } else {
+    console.log('[ADMIN] ⚠️ Supabase not configured, using mock response');
+    res.json({ success: true, new_balance: amount });
+  }
+});
+
+// Get user fishing inventory (for admin)
+app.get('/api/admin/fishing/user-inventory/:userId', authenticateUser, verifyStaff, async (req, res) => {
+  const { userId } = req.params;
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('user_fishing_inventory')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      res.json({ success: true, inventory: data });
+    } catch (error: any) {
+      console.error('[ADMIN] Get user inventory error:', error);
+      res.status(500).json({ error: 'Failed to get user inventory' });
+    }
+  } else {
+    res.json({ success: true, inventory: { bait_balance: 0 } });
+  }
+});
+
+// ─── FISHING V2: ADMIN PRICE CONFIGURATION ──────────────────────────────────
+
+// Get price configuration
+app.get('/api/admin/fishing/price-config', authenticateUser, verifyStaff, async (req, res) => {
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('fishing_price_config')
+        .select('*')
+        .order('lb_min', { ascending: true });
+
+      if (error) throw error;
+
+      res.json({ config: data || [] });
+    } catch (error: any) {
+      console.error('[ADMIN] Get price config error:', error);
+      res.status(500).json({ error: 'Failed to get price config' });
+    }
+  } else {
+    // Return default config
+    res.json({
+      config: [
+        { id: '1', lb_min: 1, lb_max: 20, price_per_lb: 5, label: '1-20 LB' },
+        { id: '2', lb_min: 21, lb_max: 50, price_per_lb: 11, label: '21-50 LB' },
+        { id: '3', lb_min: 51, lb_max: 90, price_per_lb: 20, label: '51-90 LB' },
+        { id: '4', lb_min: 91, lb_max: 150, price_per_lb: 47, label: '91-150 LB' },
+        { id: '5', lb_min: 151, lb_max: 200, price_per_lb: 60, label: '151-200 LB' }
+      ]
+    });
+  }
+});
+
+// Update price configuration
+app.post('/api/admin/fishing/price-config', authenticateUser, verifyStaff, async (req, res) => {
+  const adminId = req.body._user.id;
+  const { config } = req.body;
+
+  if (!config || !Array.isArray(config)) {
+    return res.status(400).json({ error: 'Invalid config format' });
+  }
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Update each tier
+      const updates = config.map(tier => 
+        supabaseAdmin
+          .from('fishing_price_config')
+          .update({
+            price_per_lb: tier.price_per_lb,
+            updated_at: new Date().toISOString(),
+            updated_by: adminId
+          })
+          .eq('id', tier.id)
+      );
+
+      await Promise.all(updates);
+
+      console.log(`[ADMIN] Updated price config by ${adminId}`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Update price config error:', error);
+      res.status(500).json({ error: 'Failed to update price config' });
+    }
+  } else {
+    res.json({ success: true });
+  }
+});
+
+// Reset price configuration to default
+app.post('/api/admin/fishing/price-config/reset', authenticateUser, verifyStaff, async (req, res) => {
+  const adminId = req.body._user.id;
+
+  if (isSupabaseConfigured && supabaseAdmin) {
+    try {
+      // Delete all existing config
+      await supabaseAdmin.from('fishing_price_config').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+      // Insert default config
+      const { error } = await supabaseAdmin
+        .from('fishing_price_config')
+        .insert([
+          { lb_min: 1, lb_max: 20, price_per_lb: 5, label: '1-20 LB', updated_by: adminId },
+          { lb_min: 21, lb_max: 50, price_per_lb: 11, label: '21-50 LB', updated_by: adminId },
+          { lb_min: 51, lb_max: 90, price_per_lb: 20, label: '51-90 LB', updated_by: adminId },
+          { lb_min: 91, lb_max: 150, price_per_lb: 47, label: '91-150 LB', updated_by: adminId },
+          { lb_min: 151, lb_max: 200, price_per_lb: 60, label: '151-200 LB', updated_by: adminId }
+        ]);
+
+      if (error) throw error;
+
+      console.log(`[ADMIN] Reset price config to default by ${adminId}`);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[ADMIN] Reset price config error:', error);
+      res.status(500).json({ error: 'Failed to reset price config' });
+    }
+  } else {
+    res.json({ success: true });
+  }
+});
+
 // ─── SEED ADMIN ────────────────────────────────────────────────────────────────
 async function seedAdminUser() {
   const email    = 'satriarizkyananda27@gmail.com';
@@ -935,7 +2013,8 @@ async function seedAdminUser() {
     console.log('[LOCAL SEED] Seeded local admin nanddev.');
   }
 
-  // Supabase seed — uses signUp (anon key) instead of auth.admin.createUser (service role)
+  // Supabase seed - DISABLED (use SQL script instead)
+  // Run SCHEMA_FINAL_FIXED.sql to create admin user
   if (isSupabaseConfigured && supabase) {
     try {
       // Check if public.users table is accessible
@@ -945,97 +2024,26 @@ async function seedAdminUser() {
         .limit(1);
 
       if (checkError) {
-        console.log('[SUPABASE CONNECTION INFO] Users table not accessible. Run schema.sql in your Supabase SQL Editor first.');
+        console.log('[SUPABASE] Users table not accessible. Run SCHEMA_FINAL_FIXED.sql in Supabase SQL Editor.');
         return;
       }
 
       // Check if admin already exists in public.users
       const { data: existing } = await supabase
         .from('users')
-        .select('id')
-        .eq('email', email)
+        .select('id, username, email')
+        .eq('username', username)
         .maybeSingle();
 
       if (existing) {
-        // Already exists — ensure is_staff and balance are correct via service role if available
-        if (supabaseAdmin) {
-          await supabaseAdmin
-            .from('users')
-            .update({ is_staff: true, balance: startingBalance })
-            .eq('email', email);
-        }
-        console.log('[SUPABASE SEED] Admin nanddev already exists — updated is_staff & balance.');
+        console.log('[SUPABASE] Admin user exists:', existing.username, '/', existing.email);
         return;
       }
 
-      // ① Try signUp — returns a session JWT we can use to satisfy RLS (auth.uid() = id)
-      let authUserId: string | null = null;
-      let sessionToken: string | null = null;
-
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { username } }
-      });
-
-      if (signUpError) {
-        // User already exists in auth.users — sign in to get session
-        console.log('[SUPABASE SEED] signUp failed:', signUpError.message, '— trying signIn...');
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) {
-          console.log('[SUPABASE SEED] signIn also failed:', signInError.message);
-        } else {
-          authUserId   = signInData?.user?.id || null;
-          sessionToken = signInData?.session?.access_token || null;
-        }
-      } else {
-        authUserId   = signUpData?.user?.id || null;
-        sessionToken = signUpData?.session?.access_token || null;
-      }
-
-      if (!authUserId) {
-        console.log('[SUPABASE SEED] Could not obtain auth user ID — seed skipped.');
-        return;
-      }
-
-      // ② Wait briefly for the DB trigger (handle_new_user) to fire
-      await new Promise(r => setTimeout(r, 800));
-
-      // ③ Upsert the profile row.
-      //    Priority: service role client (bypasses RLS) > user's own JWT (satisfies RLS) > skip
-      let upsertClient = supabaseAdmin; // service role bypasses RLS entirely
-
-      if (!upsertClient && sessionToken) {
-        // No service role key — create a temporary client authenticated as the user
-        // This satisfies the RLS policy: auth.uid() = id
-        upsertClient = createClient(supabaseUrl, supabaseKey, {
-          global: { headers: { Authorization: `Bearer ${sessionToken}` } },
-          auth:   { autoRefreshToken: false, persistSession: false }
-        });
-      }
-
-      if (!upsertClient) {
-        console.log('[SUPABASE SEED] No client available to upsert profile — add SUPABASE_SERVICE_KEY to .env.');
-        return;
-      }
-
-      const { error: upsertError } = await upsertClient
-        .from('users')
-        .upsert({
-          id:       authUserId,
-          email,
-          username,
-          balance:  startingBalance,
-          is_staff: true
-        }, { onConflict: 'id' });
-
-      if (upsertError) {
-        console.log('[SUPABASE SEED] Profile upsert failed:', upsertError.message);
-      } else {
-        console.log('[SUPABASE SEED] Successfully seeded admin nanddev!');
-      }
+      console.log('[SUPABASE] Admin user not found. Please run SCHEMA_FINAL_FIXED.sql to create it.');
+      console.log('[SUPABASE] Then create user in Supabase Auth: satriarizkyananda27@gmail.com / nanda900');
     } catch (e: any) {
-      console.log('[SUPABASE SEED ERROR] Skipping:', e.message || e);
+      console.log('[SUPABASE ERROR]', e.message || e);
     }
   }
 }
@@ -1058,8 +2066,14 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  app.listen(PORT, '0.0.0.0', async () => {
     console.log(`[SERVER RUNNING] Full-stack Server successfully started on http://0.0.0.0:${PORT}`);
+    
+    // Resume active AFK fishing sessions after server restart
+    const { resumeActiveSessions } = await import('./afk-fishing-worker.js');
+    setTimeout(async () => {
+      await resumeActiveSessions();
+    }, 2000); // Wait 2 seconds for server to fully initialize
   });
 }
 

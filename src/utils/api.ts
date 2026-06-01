@@ -189,5 +189,159 @@ export const API = {
 
   async getUserWithdrawalHistory(userId: string) {
     return request(`/api/user/withdrawals/${userId}`);
+  },
+
+  // Fishing Endpoints
+  async checkFishingAccess() {
+    return request('/api/fishing/check-access');
+  },
+
+  async getFishingInventory() {
+    return request('/api/fishing/inventory');
+  },
+
+  async equipFishingRod(rod: string) {
+    return request('/api/fishing/equip-rod', {
+      method: 'POST',
+      body: JSON.stringify({ rod })
+    });
+  },
+
+  async catchFish(params: { fish_id: number; fish_name: string; lb: number; is_perfect: boolean; action: 'sell' | 'save' }) {
+    return request('/api/fishing/catch-fish', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  },
+
+  async getFishInventory() {
+    return request('/api/fishing/fish-inventory');
+  },
+
+  async sellFish(fishId: string) {
+    return request('/api/fishing/sell-fish', {
+      method: 'POST',
+      body: JSON.stringify({ fish_id: fishId })
+    });
+  },
+
+  async sellAllFish() {
+    return request('/api/fishing/sell-all-fish', {
+      method: 'POST'
+    });
+  },
+
+  // AFK Fishing Endpoints
+  async startAFKFishing(rod: string) {
+    return request('/api/fishing/afk/start', {
+      method: 'POST',
+      body: JSON.stringify({ rod })
+    });
+  },
+
+  async stopAFKFishing() {
+    return request('/api/fishing/afk/stop', {
+      method: 'POST'
+    });
+  },
+
+  async getAFKStatus() {
+    return request('/api/fishing/afk/status');
+  },
+
+  async getFishingLogs() {
+    return request('/api/fishing/logs');
+  },
+
+  async claimPendingFish(limit: number = 10) {
+    return request('/api/fishing/claim-pending', {
+      method: 'POST',
+      body: JSON.stringify({ limit })
+    });
+  },
+
+  // Convert Fishing Saldo to Main Balance
+  async convertFishingSaldo(amount: number) {
+    return request('/api/fishing/convert-saldo', {
+      method: 'POST',
+      body: JSON.stringify({ amount })
+    });
+  },
+
+  // User Rod Access
+  async getUserRods() {
+    return request('/api/fishing/user-rods');
+  },
+
+  // Admin Fishing Endpoints
+  async getAdminFishingAccessList() {
+    return request('/api/admin/fishing/access-list');
+  },
+
+  async grantFishingAccess(userId: string, durationDays: number) {
+    return request('/api/admin/fishing/grant-access', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, duration_days: durationDays })
+    });
+  },
+
+  async revokeFishingAccess(accessId: string) {
+    return request('/api/admin/fishing/revoke-access', {
+      method: 'POST',
+      body: JSON.stringify({ access_id: accessId })
+    });
+  },
+
+  async getActiveFishers() {
+    return request('/api/admin/fishing/active');
+  },
+
+  // Admin Rod Management
+  async getUserRodAccess(userId: string) {
+    return request(`/api/admin/fishing/user-rods/${userId}`);
+  },
+
+  async grantRodAccess(userId: string, rodId: string, notes?: string) {
+    return request('/api/admin/fishing/grant-rod', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, rod_id: rodId, notes })
+    });
+  },
+
+  async revokeRodAccess(userId: string, rodId: string) {
+    return request('/api/admin/fishing/revoke-rod', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, rod_id: rodId })
+    });
+  },
+
+  // Admin Bait Management
+  async grantBait(userId: string, amount: number, notes?: string) {
+    return request('/api/admin/fishing/grant-bait', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, amount, notes })
+    });
+  },
+
+  async getUserFishingInventory(userId: string) {
+    return request(`/api/admin/fishing/user-inventory/${userId}`);
+  },
+
+  // Admin Price Configuration
+  async getFishingPriceConfig() {
+    return request('/api/admin/fishing/price-config');
+  },
+
+  async updateFishingPriceConfig(config: Array<{ id: string; price_per_lb: number }>) {
+    return request('/api/admin/fishing/price-config', {
+      method: 'POST',
+      body: JSON.stringify({ config })
+    });
+  },
+
+  async resetFishingPriceConfig() {
+    return request('/api/admin/fishing/price-config/reset', {
+      method: 'POST'
+    });
   }
 };

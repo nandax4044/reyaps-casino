@@ -23,5 +23,12 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "supabase/functions",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

@@ -1,9 +1,9 @@
 import React from 'react';
-import { Gift, TrendingUp, Crown, Zap, Gamepad2 } from 'lucide-react';
+import { Gift, TrendingUp, Crown, Zap, Gamepad2, Fish, Sparkles } from 'lucide-react';
 
 interface LobbyProps {
   user: any;
-  onSelectGame: (game: 'crash' | 'cases') => void;
+  onSelectGame: (game: 'crash' | 'cases' | 'fishing') => void;
   onOpenProfile: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
@@ -18,10 +18,10 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
     {
       id: 'cases' as const,
       name: 'Case Opening',
-      description: 'Buka chest dan dapatkan item langka dengan sistem RNG yang adil',
+      description: 'Open chests and get rare items with fair RNG system',
       icon: Gift,
-      color: 'from-blue-600 to-sky-500',
-      bgGlow: 'bg-blue-500/10',
+      color: 'from-[#38BDF8] to-[#1D4ED8]',
+      bgGlow: 'from-[#38BDF8]/20 to-[#1D4ED8]/20',
       image: '/images/intichest2.png',
       stats: '15 Chests • 75 Items',
       published: gamesPublished?.cases !== false
@@ -29,37 +29,62 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
     {
       id: 'crash' as const,
       name: 'Crash Game',
-      description: 'Bertaruh dan cashout sebelum crash untuk menggandakan saldo Anda',
+      description: 'Bet and cashout before crash to multiply your balance',
       icon: TrendingUp,
-      color: 'from-orange-600 to-red-500',
-      bgGlow: 'bg-orange-500/10',
+      color: 'from-orange-500 to-red-500',
+      bgGlow: 'from-orange-500/20 to-red-500/20',
       image: '/images/crashlogo.png',
       stats: 'Multiplier • High Risk',
       published: gamesPublished?.crash !== false
+    },
+    {
+      id: 'fishing' as const,
+      name: 'AFK Fishing',
+      description: 'Auto fishing bot to catch rare fish and sell them',
+      icon: Fish,
+      color: 'from-[#38BDF8] to-[#1D4ED8]',
+      bgGlow: 'from-[#38BDF8]/20 to-[#1D4ED8]/20',
+      image: '/bannerfishing.png',
+      stats: '10 Fish Types • Auto Bot',
+      published: true
     }
   ];
 
   return (
-    <div className="w-full flex flex-col gap-8 animate-fade-in">
-      {/* Welcome Section */}
-      <div className="text-center">
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-400/30 rounded-full px-5 py-2.5 mb-6 backdrop-blur-sm shadow-lg shadow-cyan-500/10">
-          <Crown className="w-5 h-5 text-yellow-400 animate-pulse" />
-          <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 uppercase tracking-wider">
-            Selamat Datang, {user.username}!
-          </span>
+    <div className="w-full flex flex-col gap-12 animate-fade-in">
+      {/* Welcome Section - Liquid Glass */}
+      <div className="text-center relative">
+        {/* Ambient Glow - Subtle */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#38BDF8] rounded-full mix-blend-multiply filter blur-[128px] opacity-5 animate-pulse"></div>
+        
+        <div className="relative">
+          {/* Welcome Badge */}
+          <div className="inline-flex items-center gap-3 mb-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#38BDF8] to-[#1D4ED8] rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+              <div className="relative backdrop-blur-xl bg-gradient-to-r from-white/[0.08] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-3 flex items-center gap-3">
+                <Crown className="w-5 h-5 text-[#67E8F9] animate-pulse" />
+                <span className="text-sm font-bold bg-gradient-to-r from-white via-[#67E8F9] to-white bg-clip-text text-transparent tracking-wide">
+                  Welcome, {user.username}!
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Title */}
+          <h2 className="text-5xl md:text-6xl lg:text-7xl font-black bg-gradient-to-r from-white via-[#67E8F9] to-white bg-clip-text text-transparent mb-4 tracking-tight">
+            
+          </h2>
+          
+          {/* Subtitle */}
+          <p className="text-lg text-white/60 max-w-2xl mx-auto leading-relaxed">
+             <span className="text-[#38BDF8] font-semibold"></span> 
+          </p>
         </div>
-        <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 font-display uppercase tracking-tight mb-4 drop-shadow-[0_0_30px_rgba(34,211,238,0.3)]">
-          
-        </h2>
-        <p className="text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed font-medium">
-          
-          <span className="text-cyan-400 font-bold"></span>
-        </p>
       </div>
 
-      {/* Games Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+      {/* Games Grid - Liquid Glass Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {games.map((game) => {
           const Icon = game.icon;
           const isDisabled = !game.published;
@@ -68,63 +93,95 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
             <div
               key={game.id}
               onClick={() => !isDisabled && onSelectGame(game.id)}
-              className={`group relative bg-gradient-to-br from-[#1a1535]/90 to-[#0f0d1f]/95 border-2 border-white/10 rounded-[28px] p-6 transition-all duration-500 overflow-hidden ${
-                isDisabled 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:from-[#221a3f]/95 hover:to-[#14112a]/95 hover:border-purple-500/60 cursor-pointer transform hover:-translate-y-2 hover:shadow-[0_15px_45px_rgba(168,85,247,0.35)]'
-              }`}
+              className={`group relative ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               {/* Maintenance Badge */}
               {isDisabled && (
-                <div className="absolute top-4 right-4 bg-red-500/20 border border-red-500/50 rounded-full px-3 py-1 z-20">
-                  <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider">Maintenance</span>
+                <div className="absolute top-4 right-4 z-20">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-red-500 rounded-full blur-lg opacity-50"></div>
+                    <div className="relative backdrop-blur-xl bg-red-500/20 border border-red-500/50 rounded-full px-4 py-1.5">
+                      <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Maintenance</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Glow Effect */}
-              <div className={`absolute -right-16 -top-16 w-56 h-56 ${game.bgGlow} opacity-[0.06] ${!isDisabled && 'group-hover:opacity-[0.18]'} rounded-full blur-3xl transition-all duration-500`} />
-              
-              {/* Top Badge */}
-              <div className={`absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-[3px] bg-transparent ${!isDisabled && 'group-hover:bg-gradient-to-r group-hover:from-purple-500 group-hover:to-pink-500'} rounded-full transition-all duration-300`} />
+              {/* Hover Glow Effect */}
+              {!isDisabled && (
+                <div className={`absolute inset-0 bg-gradient-to-br ${game.bgGlow} rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+              )}
 
-              {/* Game Image - BIGGER */}
-              <div className="relative mb-4 flex items-center justify-center">
-                <div className="w-full h-48 flex items-center justify-center">
+              {/* Glass Card */}
+              <div className={`relative backdrop-blur-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] rounded-3xl border border-white/[0.08] p-8 shadow-2xl overflow-hidden transition-all duration-500 ${
+                !isDisabled && 'group-hover:border-white/20 group-hover:transform group-hover:-translate-y-2'
+              }`}>
+                {/* Top Accent Line */}
+                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r ${game.color} rounded-full opacity-0 ${!isDisabled && 'group-hover:opacity-100'} transition-opacity duration-300`}></div>
+
+                {/* Game Image */}
+                <div className="relative mb-6 flex items-center justify-center h-40">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${game.bgGlow} rounded-2xl blur-2xl opacity-0 ${!isDisabled && 'group-hover:opacity-50'} transition-opacity duration-500`}></div>
                   <img 
                     src={game.image} 
                     alt={game.name}
-                    className={`w-40 h-40 object-contain filter drop-shadow-[0_10px_24px_rgba(0,0,0,0.7)] transition-all duration-500 ${
-                      isDisabled ? 'grayscale' : 'group-hover:scale-110 group-hover:rotate-2'
+                    className={`relative w-32 h-32 object-contain filter drop-shadow-2xl transition-all duration-500 ${
+                      isDisabled ? 'grayscale' : 'group-hover:scale-110 group-hover:rotate-3'
                     }`}
                     referrerPolicy="no-referrer"
                   />
                 </div>
-              </div>
 
-              {/* Content */}
-              <div className="relative z-10">
-                <h3 className={`text-2xl font-black tracking-wide font-display mb-2 transition-colors ${
-                  isDisabled ? 'text-slate-500' : 'text-slate-100 group-hover:text-purple-300'
-                }`}>
-                  {game.name}
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                  {isDisabled ? 'Game sedang dalam perbaikan. Silakan coba lagi nanti.' : game.description}
-                </p>
-                
-                {/* Stats */}
-                <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mb-6">
-                  <Gamepad2 className="w-3 h-3" />
-                  <span>{game.stats}</span>
-                </div>
+                {/* Content */}
+                <div className="relative z-10 space-y-4">
+                  {/* Title */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${game.color} flex items-center justify-center`}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <h3 className={`text-2xl font-bold transition-colors ${
+                      isDisabled ? 'text-white/40' : 'text-white group-hover:text-[#67E8F9]'
+                    }`}>
+                      {game.name}
+                    </h3>
+                  </div>
 
-                {/* Play Button */}
-                <div className={`w-full py-3 rounded-xl text-center text-sm font-black transition-all duration-300 shadow-lg ${
-                  isDisabled
-                    ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
-                    : `bg-gradient-to-r ${game.color} hover:opacity-90 text-white transform group-hover:scale-[1.03]`
-                }`}>
-                  {isDisabled ? 'DALAM PERBAIKAN' : 'MAINKAN SEKARANG'}
+                  {/* Description */}
+                  <p className="text-sm text-white/60 leading-relaxed min-h-[40px]">
+                    {isDisabled ? 'Game is under maintenance. Please try again later.' : game.description}
+                  </p>
+                  
+                  {/* Stats */}
+                  <div className="flex items-center gap-2 text-xs text-white/50 font-medium">
+                    <Gamepad2 className="w-4 h-4" />
+                    <span>{game.stats}</span>
+                  </div>
+
+                  {/* Play Button */}
+                  <button
+                    disabled={isDisabled}
+                    className={`w-full py-4 rounded-2xl text-center text-sm font-bold transition-all duration-300 overflow-hidden relative ${
+                      isDisabled
+                        ? 'bg-white/[0.05] text-white/40 cursor-not-allowed'
+                        : 'group/btn'
+                    }`}
+                  >
+                    {!isDisabled && (
+                      <>
+                        <div className={`absolute inset-0 bg-gradient-to-r ${game.color} bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]`}></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                        <div className={`absolute inset-0 bg-gradient-to-r ${game.color} blur-xl opacity-50 group-hover/btn:opacity-75 transition-opacity`}></div>
+                      </>
+                    )}
+                    <span className="relative text-white flex items-center justify-center gap-2">
+                      {isDisabled ? 'UNDER MAINTENANCE' : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          PLAY NOW
+                        </>
+                      )}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -132,11 +189,11 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
         })}
       </div>
 
-      {/* Footer Info */}
-      <div className="text-center mt-4">
-        <div className="inline-flex items-center gap-2 text-xs text-slate-500 font-mono">
-          <Zap className="w-3 h-3 text-emerald-500 animate-pulse" />
-          <span>Semua game menggunakan sistem RNG yang adil dan transparan</span>
+      {/* Footer Info - Liquid Glass */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-3 backdrop-blur-xl bg-gradient-to-r from-white/[0.05] to-white/[0.02] rounded-2xl border border-white/[0.08] px-6 py-3">
+          <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span className="text-sm text-white/60"></span>
         </div>
       </div>
     </div>

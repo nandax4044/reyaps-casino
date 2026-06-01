@@ -1,0 +1,156 @@
+{
+  "rods": [
+    {
+      "id": "ez_rod",
+      "name": "EZ Rod",
+      "description": "Rod gratis untuk pemula - 10-12 detik",
+      "emoji": "🎣",
+      "image": "/images/ezrod.png",
+      "intervalMin": 10000,
+      "intervalMax": 12000,
+      "lbBonus": 0,
+      "requiresAdmin": false,
+      "isFree": true,
+      "color": "#64748b"
+    },
+    {
+      "id": "lico_rod",
+      "name": "Lico Rod",
+      "description": "Catching fish is twice as fast.",
+      "emoji": "🌿",
+      "image": "/images/lico.png",
+      "intervalMin": 6000,
+      "intervalMax": 8000,
+      "lbBonus": 0,
+      "requiresAdmin": true,
+      "color": "#22c55e"
+    },
+    {
+      "id": "golden_rod",
+      "name": "Golden Rod",
+      "description": "Rod emas",
+      "emoji": "🥇",
+      "image": "/images/goldenrod.png",
+      "intervalMin": 5000,
+      "intervalMax": 6000,
+      "lbBonus": 0,
+      "requiresAdmin": true,
+      "color": "#fbbf24"
+    },
+    {
+      "id": "thanksgiving_rod",
+      "name": "Thanksgiving Rod",
+      "description": "Grants a 70% chance of catching a fish.",
+      "emoji": "🦃",
+      "image": "/images/tgrod.png",
+      "intervalMin": 4000,
+      "intervalMax": 5000,
+      "lbBonus": 0,
+      "requiresAdmin": true,
+      "color": "#f97316"
+    }
+  ],
+  "fish_types": [
+    {
+      "id": 1,
+      "name": "Turkey Fish",
+      "emoji": "🐟",
+      "image": "/images/turkeyfish.png",
+      "color": "#60a5fa"
+    },
+    {
+      "id": 2,
+      "name": "Orca",
+      "emoji": "🐠",
+      "image": "/images/orcafish.png",
+      "color": "#a78bfa"
+    },
+    {
+      "id": 3,
+      "name": "Neon fish",
+      "emoji": "🐡",
+      "image": "/images/neonfish.png",
+      "color": "#f59e0b"
+    },
+    {
+      "id": 4,
+      "name": "Koi Fish",
+      "emoji": "🦈",
+      "image": "/images/koifish.png",
+      "color": "#ef4444"
+    },
+    {
+      "id": 5,
+      "name": "Dragon Fish",
+      "emoji": "🐋",
+      "image": "/images/dragonfish.png",
+      "color": "#ef4444"
+    },
+    {
+      "id": 6,
+      "name": "Axoloth",
+      "emoji": "🦑",
+      "image": "/images/axoloth.png",
+      "color": "#ef4444"
+    },
+    {
+      "id": 7,
+      "name": "Demon Fish",
+      "emoji": "🦐",
+      "image": "/images/demonfish.png",
+      "color": "#ec4899"
+    }
+  ],
+  "bait": {
+    "name": "Fishing Bait",
+    "description": "Umpan untuk memancing",
+    "emoji": "🪱",
+    "image": "/images/bait.png",
+    "consumePerCatch": 1
+  },
+  "lb_price_tiers": [
+    { "min": 1, "max": 20, "pricePerLb": 5, "label": "1-20 LB" },
+    { "min": 21, "max": 50, "pricePerLb": 11, "label": "21-50 LB" },
+    { "min": 51, "max": 90, "pricePerLb": 20, "label": "51-90 LB" },
+    { "min": 91, "max": 150, "pricePerLb": 47, "label": "91-150 LB" },
+    { "min": 151, "max": 200, "pricePerLb": 60, "label": "151-200 LB" }
+  ],
+  "packages": [
+    {
+      "id": "basic",
+      "name": "Basic Package",
+      "duration_days": 7,
+      "badge": "🥉",
+      "description": "Akses fishing 7 hari",
+      "popular": false
+    },
+    {
+      "id": "premium",
+      "name": "Premium Package",
+      "duration_days": 14,
+      "badge": "🥈",
+      "description": "Akses fishing 14 hari",
+      "popular": true
+    },
+    {
+      "id": "ultimate",
+      "name": "Ultimate Package",
+      "duration_days": 30,
+      "badge": "🥇",
+      "description": "Akses fishing 30 hari",
+      "popular": false
+    }
+  ],
+  "admin_contact": {
+    "name": "Admin ReyaBet",
+    "discord": "https://discord.gg/ZHF2N94p5",
+    "note": "Klik tombol 'Hubungi Admin' untuk membeli akses fishing"
+  },
+  "ui": {
+    "fishingCharacterImage": "/fishing-character.png",
+    "fishingCharacterAlt": "Growtopia Character Fishing",
+    "loadingImage": "/images/fishing/loading.png",
+    "worldLockImage": "/images/world_lock.png",
+    "baitImage": "/images/bait.png"
+  }
+}

@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "tsx --watch server.ts",
+    "dev:no-watch": "tsx server.ts",
     "build": "vite build",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
