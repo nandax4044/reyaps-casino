@@ -427,6 +427,11 @@ export default async function handler(req: any, res: any) {
       return await handleLogin(body, res);
     }
 
+    // Refresh token endpoint
+    if (path === '/auth/refresh' && method === 'POST') {
+      return await handleRefreshToken(body, res);
+    }
+
     // ── PUBLIC: Game config routes (no auth needed) ──────────────────────────
     if (path.startsWith('/games/config/') && method === 'GET') {
       const gameType = path.split('/').pop();
@@ -637,21 +642,38 @@ export default async function handler(req: any, res: any) {
 async function authenticateToken(token: string) {
   if (isSupabaseConfigured && supabase) {
     try {
+      // Try to get user with the token
       const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !authData?.user) return null;
+      
+      if (authError) {
+        console.log('[AUTH] Token validation error:', authError.message);
+        return null;
+      }
+      
+      if (!authData?.user) {
+        console.log('[AUTH] No user data from token');
+        return null;
+      }
 
+      // Fetch user profile from database
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
         .single();
 
-      if (userError || !user) return null;
+      if (userError || !user) {
+        console.log('[AUTH] User profile not found:', userError?.message);
+        return null;
+      }
+      
       return user;
-    } catch (e) {
+    } catch (e: any) {
+      console.error('[AUTH] Exception:', e.message);
       return null;
     }
   } else {
+    // Local memory mode - token is just user ID
     return localDb.users.find(u => u.id === token) || null;
   }
 }
@@ -712,8 +734,9 @@ async function handleRegister(body: any, res: any) {
         await patchClient.from('users').update({ username: slugUsername }).eq('id', authUserId);
         const merged = { ...triggerUser, username: slugUsername };
         const token = sessionToken || authUserId;
+        const refresh_token = authData.session?.refresh_token || null;
         const { password: _, ...safeUser } = merged as any;
-        return res.json({ success: true, user: safeUser, token });
+        return res.json({ success: true, user: safeUser, token, refresh_token });
       }
 
       const insertClient = sessionToken
@@ -740,8 +763,9 @@ async function handleRegister(body: any, res: any) {
       }
 
       const token = sessionToken || authUserId;
+      const refresh_token = authData.session?.refresh_token || null;
       const { password: _, ...safeManualUser } = manualUser as any;
-      return res.json({ success: true, user: safeManualUser, token });
+      return res.json({ success: true, user: safeManualUser, token, refresh_token });
 
     } catch (e: any) {
       return res.status(500).json({ error: e.message || 'Server error' });
@@ -864,7 +888,8 @@ async function handleLogin(body: any, res: any) {
         return res.json({
           success: true,
           user: safeUser,
-          token: sessionData.session.access_token
+          token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token
         });
 
       } catch (e: any) {
@@ -900,6 +925,55 @@ async function handleLogin(body: any, res: any) {
   }
 }
 
+// ─── Refresh Token Handler ─────────────────────────────────────────────────────
+async function handleRefreshToken(body: any, res: any) {
+  try {
+    const { refresh_token } = body;
+
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'Refresh token diperlukan' });
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+
+        if (error || !data?.session) {
+          console.log('[REFRESH] Token refresh failed:', error?.message);
+          return res.status(401).json({ error: 'Refresh token tidak valid atau sudah kadaluarsa' });
+        }
+
+        // Get user profile
+        const { data: user, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userError || !user) {
+          return res.status(500).json({ error: 'Profil user tidak ditemukan' });
+        }
+
+        const { password: _, ...safeUser } = user as any;
+        return res.json({
+          success: true,
+          user: safeUser,
+          token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        });
+      } catch (e: any) {
+        console.error('[REFRESH] Exception:', e);
+        return res.status(500).json({ error: 'Gagal refresh token: ' + e.message });
+      }
+    } else {
+      // Local memory mode - just return the same token
+      return res.json({ success: true, token: refresh_token });
+    }
+  } catch (error: any) {
+    console.error('[REFRESH] Outer Exception:', error);
+    return res.status(500).json({ error: 'Terjadi kesalahan sistem: ' + error.message });
+  }
+}
 
 // ─── Get Inventory Handler ─────────────────────────────────────────────────────
 async function handleGetInventory(userId: string, res: any) {

@@ -1,0 +1,134 @@
+═══════════════════════════════════════════════════════════════════
+  🚨 FIX TOKEN KADALUARSA - DEPLOY SEKARANG! 🚨
+═══════════════════════════════════════════════════════════════════
+
+MASALAH:
+--------
+❌ HTTP 401 "Unauthorized" - Token kadaluarsa setelah 1 jam
+❌ User harus login ulang terus-menerus
+❌ Error: "Token tidak valid atau sudah kadaluarsa. Silakan login ulang"
+❌ AFK fishing terganggu karena session expired
+
+PENYEBAB:
+---------
+Supabase JWT access token hanya valid 1 jam. Setelah itu expired dan
+user harus login ulang. Tidak ada mekanisme auto-refresh.
+
+SOLUSI YANG DITERAPKAN:
+------------------------------
+✅ 1. Implementasi AUTO TOKEN REFRESH
+✅ 2. Tambah endpoint /api/auth/refresh
+✅ 3. Simpan refresh_token di localStorage
+✅ 4. Auto-retry request setelah refresh token
+✅ 5. Better error logging untuk debugging
+
+BENEFIT:
+--------
+✅ User login sekali, tetap login 30 hari
+✅ Token otomatis refresh setiap 1 jam
+✅ Tidak perlu login ulang
+✅ AFK fishing tidak terganggu
+✅ User experience lebih smooth
+
+FILE YANG DIUBAH:
+-----------------
+Backend:
+✅ api/index.ts - Tambah handleRefreshToken()
+✅ api/index.ts - Update handleLogin() return refresh_token
+✅ api/index.ts - Update handleRegister() return refresh_token
+✅ api/index.ts - Better logging di authenticateToken()
+
+Frontend:
+✅ src/utils/api.ts - Tambah refreshAuthToken()
+✅ src/utils/api.ts - Update request() auto-refresh logic
+✅ src/utils/api.ts - Simpan/clear refresh_token
+
+═══════════════════════════════════════════════════════════════════
+  🚀 DEPLOY SEKARANG:
+═══════════════════════════════════════════════════════════════════
+
+CARA 1: Gunakan Script (RECOMMENDED)
+-------------------------------------
+.\deploy-to-vercel.ps1
+
+
+CARA 2: Manual
+--------------
+git add .
+git commit -m "Fix token expired - implement auto token refresh"
+git push origin main
+
+
+═══════════════════════════════════════════════════════════════════
+  ⚠️ PENTING SETELAH DEPLOY:
+═══════════════════════════════════════════════════════════════════
+
+1. MINTA SEMUA USER LOGOUT DAN LOGIN ULANG
+   ----------------------------------------
+   User yang sudah login sebelumnya tidak punya refresh_token.
+   Mereka harus logout dan login ulang untuk mendapatkan refresh_token.
+
+2. CLEAR BROWSER STORAGE (OPTIONAL)
+   ---------------------------------
+   Jika user mengalami masalah, minta mereka:
+   - Buka browser console (F12)
+   - Ketik: localStorage.clear()
+   - Refresh page dan login ulang
+
+3. VERIFIKASI TOKEN TERSIMPAN
+   ---------------------------
+   Setelah login, cek di browser console:
+   - localStorage.getItem('auth_token') → harus ada
+   - localStorage.getItem('refresh_token') → harus ada
+
+═══════════════════════════════════════════════════════════════════
+  🧪 TESTING:
+═══════════════════════════════════════════════════════════════════
+
+1. Login dengan admin/admin123
+2. Tunggu 1 jam (atau ubah token expiry di Supabase untuk testing)
+3. Lakukan action (buka profile, dll)
+4. Token harus auto-refresh tanpa error
+5. User tetap login tanpa perlu login ulang
+
+═══════════════════════════════════════════════════════════════════
+  📊 CARA KERJA AUTO-REFRESH:
+═══════════════════════════════════════════════════════════════════
+
+1. User login → Dapat access_token (1 jam) + refresh_token (30 hari)
+2. Token expired → Request ke API dapat 401
+3. Auto refresh → Frontend otomatis panggil /api/auth/refresh
+4. Dapat token baru → Retry request yang gagal
+5. User tetap login → Tidak perlu login ulang!
+
+═══════════════════════════════════════════════════════════════════
+  ✅ EXPECTED RESULT:
+═══════════════════════════════════════════════════════════════════
+
+✅ User login sekali, tetap login sampai 30 hari
+✅ Token otomatis refresh setiap 1 jam (transparent)
+✅ Tidak ada error "Token kadaluarsa" lagi
+✅ AFK fishing berjalan tanpa gangguan
+✅ User experience lebih smooth
+
+═══════════════════════════════════════════════════════════════════
+  🔍 TROUBLESHOOTING:
+═══════════════════════════════════════════════════════════════════
+
+Jika masih 401:
+- Clear localStorage dan login ulang
+- Cek browser console untuk error
+- Cek Vercel Function Logs
+
+Jika refresh gagal:
+- Pastikan SUPABASE_URL dan SUPABASE_KEY benar
+- Cek Supabase Auth settings
+- Pastikan refresh_token valid
+
+═══════════════════════════════════════════════════════════════════
+
+STATUS: ✅ SIAP DEPLOY - USER MENUNGGU!
+
+DEPLOY SEKARANG DAN MINTA USER LOGOUT/LOGIN ULANG!
+
+═══════════════════════════════════════════════════════════════════

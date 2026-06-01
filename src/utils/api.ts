@@ -13,10 +13,31 @@ async function request(endpoint: string, options: RequestInit = {}) {
     ...(options.headers || {})
   };
 
-  const response = await fetch(endpoint, {
+  let response = await fetch(endpoint, {
     ...options,
     headers
   });
+
+  // If 401 and we have a refresh token, try to refresh
+  if (response.status === 401 && localStorage.getItem('refresh_token')) {
+    console.log('[API] Token expired, attempting refresh...');
+    const refreshed = await refreshAuthToken();
+    
+    if (refreshed) {
+      // Retry the original request with new token
+      const newToken = getAuthToken();
+      const newHeaders = {
+        'Content-Type': 'application/json',
+        ...(newToken ? { 'Authorization': `Bearer ${newToken}` } : {}),
+        ...(options.headers || {})
+      };
+      
+      response = await fetch(endpoint, {
+        ...options,
+        headers: newHeaders
+      });
+    }
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -24,6 +45,43 @@ async function request(endpoint: string, options: RequestInit = {}) {
   }
 
   return response.json();
+}
+
+async function refreshAuthToken(): Promise<boolean> {
+  try {
+    const refresh_token = localStorage.getItem('refresh_token');
+    if (!refresh_token) return false;
+
+    const response = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token })
+    });
+
+    if (!response.ok) {
+      // Refresh failed, clear tokens
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      return false;
+    }
+
+    const data = await response.json();
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
+      console.log('[API] Token refreshed successfully');
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[API] Token refresh failed:', error);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    return false;
+  }
 }
 
 export const API = {
@@ -35,6 +93,9 @@ export const API = {
     });
     if (data.token) {
       localStorage.setItem('auth_token', data.token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
     }
     return data;
   },
@@ -46,12 +107,16 @@ export const API = {
     });
     if (data.token) {
       localStorage.setItem('auth_token', data.token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
     }
     return data;
   },
 
   logout() {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
   },
 
   isLoggedIn() {
