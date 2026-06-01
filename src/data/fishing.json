@@ -5,7 +5,7 @@
       "name": "EZ Rod",
       "description": "Rod gratis untuk pemula - 10-12 detik",
       "emoji": "🎣",
-      "image": "/images/ezrod.png",
+      "image": "/ezrod.png",
       "intervalMin": 10000,
       "intervalMax": 12000,
       "lbBonus": 0,
@@ -105,7 +105,7 @@
     "name": "Fishing Bait",
     "description": "Umpan untuk memancing",
     "emoji": "🪱",
-    "image": "/images/bait.png",
+    "image": "/images/cotd.png",
     "consumePerCatch": 1
   },
   "lb_price_tiers": [
@@ -118,31 +118,31 @@
   "packages": [
     {
       "id": "basic",
-      "name": "Basic Package",
+      "name": "Basic Package Rp.20.000",
       "duration_days": 7,
-      "badge": "🥉",
+      "badge": "",
       "description": "Akses fishing 7 hari",
       "popular": false
     },
     {
       "id": "premium",
-      "name": "Premium Package",
+      "name": "Premium Package Rp40.000",
       "duration_days": 14,
-      "badge": "🥈",
+      "badge": "",
       "description": "Akses fishing 14 hari",
       "popular": true
     },
     {
       "id": "ultimate",
-      "name": "Ultimate Package",
+      "name": "Ultimate Package Rp.80.000",
       "duration_days": 30,
-      "badge": "🥇",
+      "badge": "",
       "description": "Akses fishing 30 hari",
       "popular": false
     }
   ],
   "admin_contact": {
-    "name": "Admin ReyaBet",
+    "name": "Admin Reyaps or @Nanda",
     "discord": "https://discord.gg/ZHF2N94p5",
     "note": "Klik tombol 'Hubungi Admin' untuk membeli akses fishing"
   },

@@ -1,10 +1,12 @@
 {
+  "published": true,
   "chests": [
     {
       "id": "fishing",
       "name": "Fishing Chest",
-      "price": 50,
-      "icon": "🎣",
+      "price": 1000,
+      "published": true,
+      "icon": "",
       "color": "from-cyan-500 to-blue-600",
       "background": "linear-gradient(135deg, #091728 0%, #0d273c 100%)",
       "image": "/images/fishing_chest.png",
@@ -12,36 +14,36 @@
         {
           "name": "Wigly",
           "rarity": "Common",
-          "chance": 60,
+          "chance": 100,
           "value": 5,
-          "icon": "🥾",
+          "icon": "",
           "color": "#a1a1aa",
           "image": "/images/wigly.png"
         },
         {
           "name": "Cotd",
           "rarity": "Rare",
-          "chance": 25,
+          "chance": 50,
           "value": 30,
-          "icon": "🐟",
-          "color": "#3b82f",
+          "icon": "",
+          "color": "#3b82f6",
           "image": "/images/cotd.png"
         },
         {
           "name": "Golden Rod",
           "rarity": "Epic",
-          "chance": 4,
-          "value": 2500,
-          "icon": "🧵",
+          "chance": 3,
+          "value": 50000000,
+          "icon": "",
           "color": "#a855f7",
           "image": "/images/goldenrod.png"
         },
         {
           "name": "Fishing Hat",
           "rarity": "Legendary",
-          "chance": 2,
-          "value": 7000,
-          "icon": "🎣",
+          "chance": 1,
+          "value": 1000000000,
+          "icon": "",
           "color": "#eab308",
           "image": "/images/hatfishing.png"
         },
@@ -49,8 +51,8 @@
           "name": "Thanks Giving Rod",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 10000,
-          "icon": "🔱",
+          "value": 1000000000,
+          "icon": "",
           "color": "#ef4444",
           "image": "/images/tgrod.png"
         }
@@ -59,291 +61,306 @@
     {
       "id": "farm",
       "name": "Farm Chest",
-      "price": 80,
-      "icon": "🌾",
+      "price": 1000,
+      "published": true,
+      "icon": "",
       "color": "from-[#38bdf8] to-[#0369a1]",
       "background": "linear-gradient(135deg, #04121d 0%, #0f2d45 100%)",
       "image": "/images/farmchest.png",
       "items": [
         {
-          "name": "Rusty Pitchfork",
+          "name": "Chand",
           "rarity": "Common",
           "chance": 60,
           "value": 10,
-          "icon": "🔱",
+          "icon": "",
           "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/rust_fork/150/150"
+          "image": "/images/ch.png"
         },
         {
-          "name": "Oversized Pumpkin",
+          "name": "Tractor",
           "rarity": "Rare",
           "chance": 25,
           "value": 45,
-          "icon": "🎃",
+          "icon": "",
           "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/gargantuan_pumpkin/150/150"
+          "image": "/images/tractor.png"
         },
         {
-          "name": "Tractor Keys",
+          "name": "Ances Red",
           "rarity": "Epic",
-          "chance": 10,
-          "value": 180,
-          "icon": "🔑",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/tractor_key/150/150"
-        },
-        {
-          "name": "Golden Harvest Apple",
-          "rarity": "Legendary",
           "chance": 4,
-          "value": 650,
-          "icon": "🍎",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/gold_apple/150/150"
+          "value": 50000,
+          "icon": "",
+          "color": "#a855f7",
+          "image": "/images/ances.png"
         },
         {
-          "name": "Abundance Demeter Scythe",
+          "name": "Magplant 5000",
+          "rarity": "Legendary",
+          "chance": 2,
+          "value": 100000000000,
+          "icon": "",
+          "color": "#eab308",
+          "image": "/images/magplant.png"
+        },
+        {
+          "name": "Legendary Rayman",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 3200,
-          "icon": "⚔️",
+          "value": 1000000000000000000000,
+          "icon": "",
           "color": "#ef4444",
-          "image": "/images/prize_farm.png"
+          "image": "/images/lray2.png"
+        }
+      ]
+    },
+    {
+      "id": "new",
+      "name": "Newbie Chest",
+      "price": 500,
+      "published": true,
+      "icon": "⚔️",
+      "color": "from-sky-400 to-indigo-600",
+      "background": "linear-gradient(135deg, #081123 0%, #0d2346 100%)",
+      "image": "/images/budhachest.png",
+      "items": [
+        {
+          "name": "Gaia",
+          "rarity": "Rare",
+          "chance": 2,
+          "value": 2000000,
+          "icon": "",
+          "color": "#a1a1aa",
+          "image": "/images/gaia.png"
+        },
+        {
+          "name": "UT",
+          "rarity": "Rare",
+          "chance":4,
+          "value": 200000,
+          "icon": "",
+          "color": "#3b82f6",
+          "image": "/images/ut.png"
+        },
+        {
+          "name": "COTD",
+          "rarity": "Rare",
+          "chance": 10,
+          "value": 400,
+          "icon": "",
+          "color": "#a855f7",
+          "image": "/images/cotd.png"
+        },
+        {
+          "name": "Cashback Kupon 10x",
+          "rarity": "Rare",
+          "chance": 10,
+          "value": 400,
+          "icon": "",
+          "color": "#eab308",
+          "image": "/images/cash.png"
+        },
+        {
+          "name": "Hot Chocolate 3x",
+          "rarity": "Rare",
+          "chance": 10,
+          "value": 400,
+          "icon": "",
+          "color": "#ef4444",
+          "image": "/images/hotc.png"
+        }
+      ]
+    },
+    {
+      "id": "lock",
+      "name": "Lock Chest",
+      "price": 2000,
+      "published": true,
+      "icon": "",
+      "color": "from-cyan-400 to-blue-600",
+      "background": "linear-gradient(135deg, #06111f 0%, #0b223d 100%)",
+      "image": "/images/chestbgl.png",
+      "items": [
+        {
+          "name": "World Lock",
+          "rarity": "Common",
+          "chance": 60,
+          "value": 20,
+          "icon": "🪄",
+          "color": "#a1a1aa",
+          "image": "/images/world_lock.png"
+        },
+        {
+          "name": "Diamond Lock",
+          "rarity": "Rare",
+          "chance": 25,
+          "value": 90,
+          "icon": "",
+          "color": "#3b82f6",
+          "image": "/images/diamond_lock.png"
+        },
+        {
+          "name": "Emerald Lock",
+          "rarity": "Epic",
+          "chance": 3,
+          "value": 350,
+          "icon": "",
+          "color": "#a855f7",
+          "image": "/images/emer1.png"
+        },
+        {
+          "name": "Blue Gem Lock",
+          "rarity": "Legendary",
+          "chance": 1,
+          "value": 110000000,
+          "icon": "",
+          "color": "#eab308",
+          "image": "/images/blue_gem_lock.png"
+        },
+        {
+          "name": "Royal Lock",
+          "rarity": "Mythic",
+          "chance": 1,
+          "value": 5500000000000,
+          "icon": "",
+          "color": "#ef4444",
+          "image": "/images/royal1.png"
         }
       ]
     },
     {
       "id": "citem",
       "name": "Citem Chest",
-      "price": 120,
-      "icon": "⚔️",
-      "color": "from-sky-400 to-indigo-600",
-      "background": "linear-gradient(135deg, #081123 0%, #0d2346 100%)",
+      "price": 5000,
+      "published": true,
+      "icon": "",
+      "color": "from-blue-400 to-sky-700",
+      "background": "linear-gradient(135deg, #051421 0%, #0b243b 100%)",
       "image": "/images/citemchest.png",
       "items": [
         {
-          "name": "Iron Dagger",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 15,
-          "icon": "🗡️",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/iron_blade/150/150"
-        },
-        {
-          "name": "Carbon Steel Katana",
+          "name": "Starts",
           "rarity": "Rare",
-          "chance": 25,
-          "value": 70,
-          "icon": "⚔️",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/steel_katana/150/150"
-        },
-        {
-          "name": "Cyber Laser Carbine",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 280,
-          "icon": "🔫",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/laser_carb/150/150"
-        },
-        {
-          "name": "Plasma Radiant Sword",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 950,
-          "icon": "⚡",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/plasma_sword/150/150"
-        },
-        {
-          "name": "Asgardian Thunder Hammer",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 4800,
-          "icon": "🔨",
-          "color": "#ef4444",
-          "image": "/images/prize_weapon.png"
-        }
-      ]
-    },
-    {
-      "id": "magic",
-      "name": "Magic Chest",
-      "price": 150,
-      "icon": "🔮",
-      "color": "from-cyan-400 to-blue-600",
-      "background": "linear-gradient(135deg, #06111f 0%, #0b223d 100%)",
-      "image": "/images/magic_chest.png",
-      "items": [
-        {
-          "name": "Initiate Crystal Wand",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 20,
-          "icon": "🪄",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/crystal_wand/150/150"
-        },
-        {
-          "name": "Luminous Mana Elixir",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 90,
-          "icon": "🧪",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/mana_pot/150/150"
-        },
-        {
-          "name": "Grimoire of Fireball",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 350,
-          "icon": "📖",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/grimoire_fire/150/150"
-        },
-        {
-          "name": "Robe of Archmage",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1100,
-          "icon": "🥋",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/mage_robe/150/150"
-        },
-        {
-          "name": "Sorcerer Supreme Staff",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 5500,
-          "icon": "🔮",
-          "color": "#ef4444",
-          "image": "/images/prize_magic.png"
-        }
-      ]
-    },
-    {
-      "id": "animal",
-      "name": "Animal Chest",
-      "price": 60,
-      "icon": "🦊",
-      "color": "from-blue-400 to-sky-700",
-      "background": "linear-gradient(135deg, #051421 0%, #0b243b 100%)",
-      "image": "/images/animal_chest.png",
-      "items": [
-        {
-          "name": "Farmyard Chick Egg",
-          "rarity": "Common",
           "chance": 60,
           "value": 8,
           "icon": "🥚",
           "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/chick_egg/150/150"
+          "image": "/images/stars.png"
         },
         {
-          "name": "Fierce Timber Wolf Pup",
+          "name": "Stars",
           "rarity": "Rare",
           "chance": 25,
           "value": 35,
           "icon": "🐺",
           "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/wolf_pup/150/150"
+          "image": "/images/stars.png"
         },
         {
-          "name": "Crystalline Night Owl",
-          "rarity": "Epic",
+          "name": "Stars",
+          "rarity": "Rare",
           "chance": 10,
           "value": 140,
-          "icon": "🦉",
+          "icon": "",
           "color": "#a855f7",
-          "image": "https://picsum.photos/seed/night_owl/150/150"
+          "image": "/images/stars.png"
         },
         {
-          "name": "Golden Griffin Mount",
-          "rarity": "Legendary",
+          "name": "Tricky",
+          "rarity": "Rare",
           "chance": 4,
-          "value": 520,
-          "icon": "🦁",
+          "value": 520000000000000000000000000000000000,
+          "icon": "",
           "color": "#eab308",
-          "image": "https://picsum.photos/seed/griffin_mount/150/150"
+          "image": "/images/tricky2.png"
         },
         {
-          "name": "Eternity Phoenix Soul",
-          "rarity": "Mythic",
+          "name": "Kaido",
+          "rarity": "Rare",
           "chance": 1,
-          "value": 2800,
-          "icon": "🦅",
+          "value": 280000000000000000000000000,
+          "icon": "",
           "color": "#ef4444",
-          "image": "/images/prize_animal.png"
+          "image": "/images/kaidohd.png"
         }
       ]
     },
     {
-      "id": "treasure",
-      "name": "Treasure Chest",
-      "price": 200,
-      "icon": "👑",
+      "id": "legendarychest",
+      "name": "Legendary Chest",
+      "price": 10000,
+      "published": true,
+      "icon": "",
       "color": "from-cyan-500 to-sky-600",
       "background": "linear-gradient(135deg, #041423 0%, #0c2a47 100%)",
-      "image": "/images/treasure_chest.png",
+      "image": "/images/lgchest.png",
       "items": [
         {
-          "name": "Verdigris Copper Coin",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 25,
-          "icon": "🪙",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/copper_coin/150/150"
-        },
-        {
-          "name": "Heavy Silver Ingot",
+          "name": "Razor Wings",
           "rarity": "Rare",
-          "chance": 25,
-          "value": 120,
-          "icon": "🥈",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/silver_ingot/150/150"
+          "chance": 20,
+          "value": 70,
+          "icon": "",
+          "color": "#a1a1aa",
+          "image": "/images/59.png"
         },
         {
-          "name": "Royal Ruby Crest",
-          "rarity": "Epic",
+          "name": "Golden Apple",
+          "rarity": "Rare",
           "chance": 10,
-          "value": 480,
-          "icon": "👑",
+          "value": 700000,
+          "icon": "",
+          "color": "#3b82f6",
+          "image": "/images/120.png"
+        },
+        {
+          "name": "Stars",
+          "rarity": "Rare",
+          "chance": 8,
+          "value": 200,
+          "icon": "",
           "color": "#a855f7",
-          "image": "https://picsum.photos/seed/ruby_crest/150/150"
+          "image": "/images/stars.png"
         },
         {
-          "name": "Cursed Pirate King Crown",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1600,
-          "icon": "👑",
+          "name": "Davinci",
+          "rarity": "Rare",
+          "chance": 2,
+          "value": 300000000000000000000,
+          "icon": "",
           "color": "#eab308",
-          "image": "https://picsum.photos/seed/pirate_crown/150/150"
+          "image": "/images/davinci.png"
         },
         {
-          "name": "Sacred El Dorado Idol",
-          "rarity": "Mythic",
+          "name": "Legendary Dragon",
+          "rarity": "Rare",
           "chance": 1,
-          "value": 8500,
-          "icon": "🗿",
+          "value": 5000000000000000,
+          "icon": "",
+          "color": "#eab308",
+          "image": "/images/dragonoflegend.png"
+        },
+        {
+          "name": "Legendary Wings",
+          "rarity": "Rare",
+          "chance": 1,
+          "value": 5000000000000000,
+          "icon": "",
           "color": "#ef4444",
-          "image": "/images/prize_treasure.png"
+          "image": "/images/legendarywings.png"
         }
       ]
     },
     {
-      "id": "space",
-      "name": "Space Chest",
+      "id": "",
+      "name": "",
       "price": 250,
-      "icon": "🚀",
+      "published": false,
+      "icon": "",
       "color": "from-sky-500 to-[#1d4ed8]",
       "background": "linear-gradient(135deg, #030a1c 0%, #0a1f4a 100%)",
-      "image": "/images/space_chest.png",
+      "image": "",
       "items": [
         {
           "name": "Raw Meteorite Shard",
@@ -393,13 +410,14 @@
       ]
     },
     {
-      "id": "ocean",
-      "name": "Ocean Chest",
+      "id": "",
+      "name": "",
       "price": 100,
-      "icon": "🌊",
+      "published": false,
+      "icon": "",
       "color": "from-sky-400 to-blue-600",
       "background": "linear-gradient(135deg, #031424 0%, #0c2b47 100%)",
-      "image": "/images/ocean_chest.png",
+      "image": "",
       "items": [
         {
           "name": "Iridescent Sea Glass",
@@ -449,13 +467,14 @@
       ]
     },
     {
-      "id": "dragon",
-      "name": "Dragon Chest",
+      "id": "",
+      "name": "",
       "price": 300,
-      "icon": "🐉",
+      "published": false,
+      "icon": "",
       "color": "from-[#0284c7] via-[#0369a1] to-[#075985]",
       "background": "linear-gradient(135deg, #02101e 0%, #0b2641 100%)",
-      "image": "/images/dragon_chest.png",
+      "image": "",
       "items": [
         {
           "name": "Hardened Dragon Scale Shield",
@@ -501,342 +520,6 @@
           "icon": "❤️",
           "color": "#ef4444",
           "image": "/images/prize_dragon.png"
-        }
-      ]
-    },
-    {
-      "id": "tech",
-      "name": "Tech Chest",
-      "price": 180,
-      "icon": "💻",
-      "color": "from-cyan-400 to-blue-500",
-      "background": "linear-gradient(135deg, #0a1628 0%, #0f2744 100%)",
-      "image": "https://picsum.photos/seed/tech_chest/400/400",
-      "items": [
-        {
-          "name": "Broken Circuit Board",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 18,
-          "icon": "🔌",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/circuit_board/150/150"
-        },
-        {
-          "name": "Quantum Processor",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 95,
-          "icon": "🖥️",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/quantum_cpu/150/150"
-        },
-        {
-          "name": "Holographic Display",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 380,
-          "icon": "📱",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/holo_display/150/150"
-        },
-        {
-          "name": "AI Neural Core",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1300,
-          "icon": "🤖",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/ai_core/150/150"
-        },
-        {
-          "name": "Singularity Supercomputer",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 6800,
-          "icon": "⚡",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/supercomputer/150/150"
-        }
-      ]
-    },
-    {
-      "id": "candy",
-      "name": "Candy Chest",
-      "price": 70,
-      "icon": "🍬",
-      "color": "from-pink-400 to-rose-500",
-      "background": "linear-gradient(135deg, #2d0a1f 0%, #4a1230 100%)",
-      "image": "https://picsum.photos/seed/candy_chest/400/400",
-      "items": [
-        {
-          "name": "Sour Gummy Worm",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 9,
-          "icon": "🐛",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/gummy_worm/150/150"
-        },
-        {
-          "name": "Rainbow Lollipop",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 42,
-          "icon": "🍭",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/lollipop/150/150"
-        },
-        {
-          "name": "Chocolate Diamond Bar",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 165,
-          "icon": "🍫",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/choco_bar/150/150"
-        },
-        {
-          "name": "Golden Candy Cane",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 580,
-          "icon": "🍬",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/candy_cane/150/150"
-        },
-        {
-          "name": "Eternal Sugar Crystal",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 3100,
-          "icon": "💎",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/sugar_crystal/150/150"
-        }
-      ]
-    },
-    {
-      "id": "sports",
-      "name": "Sports Chest",
-      "price": 110,
-      "icon": "⚽",
-      "color": "from-green-400 to-emerald-600",
-      "background": "linear-gradient(135deg, #0a1f0d 0%, #0f3318 100%)",
-      "image": "https://picsum.photos/seed/sports_chest/400/400",
-      "items": [
-        {
-          "name": "Worn Baseball Glove",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 14,
-          "icon": "🥎",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/baseball_glove/150/150"
-        },
-        {
-          "name": "Championship Trophy",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 68,
-          "icon": "🏆",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/trophy/150/150"
-        },
-        {
-          "name": "Pro Athlete Jersey",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 270,
-          "icon": "👕",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/jersey/150/150"
-        },
-        {
-          "name": "Olympic Gold Medal",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 920,
-          "icon": "🥇",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/gold_medal/150/150"
-        },
-        {
-          "name": "Legendary World Cup",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 4600,
-          "icon": "🏆",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/world_cup/150/150"
-        }
-      ]
-    },
-    {
-      "id": "music",
-      "name": "Music Chest",
-      "price": 140,
-      "icon": "🎵",
-      "color": "from-purple-400 to-violet-600",
-      "background": "linear-gradient(135deg, #1a0a2e 0%, #2d1548 100%)",
-      "image": "https://picsum.photos/seed/music_chest/400/400",
-      "items": [
-        {
-          "name": "Rusty Harmonica",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 16,
-          "icon": "🎶",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/harmonica/150/150"
-        },
-        {
-          "name": "Electric Guitar Pick",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 78,
-          "icon": "🎸",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/guitar_pick/150/150"
-        },
-        {
-          "name": "Platinum Record Disc",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 310,
-          "icon": "💿",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/platinum_disc/150/150"
-        },
-        {
-          "name": "Legendary Stradivarius",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1050,
-          "icon": "🎻",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/stradivarius/150/150"
-        },
-        {
-          "name": "Divine Symphony Baton",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 5200,
-          "icon": "🎼",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/symphony_baton/150/150"
-        }
-      ]
-    },
-    {
-      "id": "ancient",
-      "name": "Ancient Chest",
-      "price": 220,
-      "icon": "🏛️",
-      "color": "from-amber-400 to-orange-600",
-      "background": "linear-gradient(135deg, #1f1408 0%, #3a2410 100%)",
-      "image": "https://picsum.photos/seed/ancient_chest/400/400",
-      "items": [
-        {
-          "name": "Cracked Clay Pot",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 22,
-          "icon": "🏺",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/clay_pot/150/150"
-        },
-        {
-          "name": "Roman Gladius Sword",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 110,
-          "icon": "⚔️",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/gladius/150/150"
-        },
-        {
-          "name": "Egyptian Scarab Amulet",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 440,
-          "icon": "🪲",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/scarab/150/150"
-        },
-        {
-          "name": "Pharaoh's Golden Mask",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1500,
-          "icon": "👑",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/pharaoh_mask/150/150"
-        },
-        {
-          "name": "Atlantis Trident of Power",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 7800,
-          "icon": "🔱",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/atlantis_trident/150/150"
-        }
-      ]
-    },
-    {
-      "id": "crystal",
-      "name": "Crystal Chest",
-      "price": 270,
-      "icon": "💎",
-      "color": "from-teal-400 to-cyan-600",
-      "background": "linear-gradient(135deg, #051f1f 0%, #0a3838 100%)",
-      "image": "https://picsum.photos/seed/crystal_chest/400/400",
-      "items": [
-        {
-          "name": "Cloudy Quartz Shard",
-          "rarity": "Common",
-          "chance": 60,
-          "value": 28,
-          "icon": "🪨",
-          "color": "#a1a1aa",
-          "image": "https://picsum.photos/seed/quartz/150/150"
-        },
-        {
-          "name": "Sapphire Gemstone",
-          "rarity": "Rare",
-          "chance": 25,
-          "value": 135,
-          "icon": "💠",
-          "color": "#3b82f6",
-          "image": "https://picsum.photos/seed/sapphire/150/150"
-        },
-        {
-          "name": "Amethyst Geode",
-          "rarity": "Epic",
-          "chance": 10,
-          "value": 540,
-          "icon": "🔮",
-          "color": "#a855f7",
-          "image": "https://picsum.photos/seed/amethyst/150/150"
-        },
-        {
-          "name": "Flawless Diamond",
-          "rarity": "Legendary",
-          "chance": 4,
-          "value": 1800,
-          "icon": "💎",
-          "color": "#eab308",
-          "image": "https://picsum.photos/seed/diamond/150/150"
-        },
-        {
-          "name": "Prismatic Infinity Stone",
-          "rarity": "Mythic",
-          "chance": 1,
-          "value": 9500,
-          "icon": "✨",
-          "color": "#ef4444",
-          "image": "https://picsum.photos/seed/infinity_stone/150/150"
         }
       ]
     }

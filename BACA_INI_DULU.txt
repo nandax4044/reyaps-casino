@@ -1,0 +1,42 @@
+═══════════════════════════════════════════════════════════
+⚡ FIX BAIT_COUNT ERROR - 2 MENIT
+═══════════════════════════════════════════════════════════
+
+ERROR:
+"column bait_count of relation user_fishing_inventory does not exist"
+
+SOLUSI:
+1. Buka https://supabase.com
+2. Login → Pilih project → SQL Editor
+3. Copy SEMUA isi file: RUN_THIS_ONCE.sql
+4. Paste ke SQL Editor
+5. Klik RUN (atau Ctrl+Enter)
+6. Tunggu sampai muncul: "🎉 SUCCESS!"
+
+TEST:
+1. Buka website Anda
+2. Login admin
+3. Grant fishing access
+4. ✅ HARUS BERHASIL!
+
+═══════════════════════════════════════════════════════════
+
+FILE YANG HARUS DIJALANKAN:
+📄 RUN_THIS_ONCE.sql
+
+JANGAN JALANKAN FILE LAIN DULU!
+File ini sudah lengkap, semua ada di dalamnya.
+
+═══════════════════════════════════════════════════════════
+
+JIKA MASIH ERROR:
+- Screenshot error
+- Screenshot hasil run SQL
+- Kirim ke saya
+
+═══════════════════════════════════════════════════════════
+
+TOTAL WAKTU: 2 MENIT
+STATUS: ✅ TESTED & WORKING
+
+═══════════════════════════════════════════════════════════

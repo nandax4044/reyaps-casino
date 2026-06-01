@@ -1,0 +1,56 @@
+═══════════════════════════════════════════════════════════
+⚡ PANDUAN CEPAT - FIX BAIT_COUNT ERROR
+═══════════════════════════════════════════════════════════
+
+LANGKAH 1: BUKA SUPABASE
+---------------------------
+1. Buka browser
+2. Pergi ke: https://supabase.com
+3. Login dengan akun Anda
+4. Pilih project Anda
+5. Klik "SQL Editor" di menu kiri
+
+LANGKAH 2: JALANKAN SQL
+---------------------------
+1. Buka file: JALANKAN_INI.sql
+2. Tekan Ctrl+A (select all)
+3. Tekan Ctrl+C (copy)
+4. Kembali ke Supabase SQL Editor
+5. Tekan Ctrl+V (paste)
+6. Klik tombol "RUN" (atau tekan Ctrl+Enter)
+7. Tunggu sampai selesai
+
+LANGKAH 3: CEK HASIL
+---------------------------
+Harus muncul tabel dengan hasil:
+✅ Column bait_balance EXISTS
+✅ Function grant_bait EXISTS
+✅ Trigger EXISTS
+
+Jika ada ❌, screenshot dan kirim ke saya.
+
+LANGKAH 4: TEST
+---------------------------
+1. Buka website Anda
+2. Login sebagai admin
+3. Pergi ke Admin Dashboard
+4. Klik Fishing Management
+5. Coba grant fishing access ke user
+6. HARUS BERHASIL tanpa error!
+
+═══════════════════════════════════════════════════════════
+
+JIKA MASIH ERROR:
+---------------------------
+1. Screenshot error message
+2. Screenshot hasil dari SQL Editor
+3. Kirim ke saya
+
+═══════════════════════════════════════════════════════════
+
+FILE YANG HARUS DIJALANKAN:
+📄 JALANKAN_INI.sql
+
+TOTAL WAKTU: 2-3 MENIT
+
+═══════════════════════════════════════════════════════════
