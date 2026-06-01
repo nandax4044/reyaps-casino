@@ -1,40 +1,13 @@
 // Vercel Serverless Function Handler
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
-// Import JSON files directly with error handling
-let caseOpeningData: any;
-let permainanData: any;
-
-try {
-  // Try to import directly (works in build)
-  caseOpeningData = require('../src/data/case_opening.json');
-  permainanData = require('../src/data/permainan.json');
-} catch (e) {
-  console.warn('[INIT] Failed to require JSON, trying fs.readFileSync', e);
-  try {
-    // Fallback to reading files (works in Vercel)
-    caseOpeningData = JSON.parse(readFileSync(join(__dirname, '../src/data/case_opening.json'), 'utf-8'));
-    permainanData = JSON.parse(readFileSync(join(__dirname, '../src/data/permainan.json'), 'utf-8'));
-  } catch (e2) {
-    console.error('[INIT] Failed to load JSON files:', e2);
-    // Will use fallback data below
-    caseOpeningData = { chests: [] };
-    permainanData = { prizes: [] };
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// USE IMPORTED JSON DATA (SYNCED WITH src/data/)
+// USE FALLBACK DATA (Hardcoded for Vercel compatibility)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Use imported data, filter only published chests
-const caseOpeningDefault: any = caseOpeningData?.chests ? {
-  ...caseOpeningData,
-  chests: caseOpeningData.chests.filter((chest: any) => chest.published !== false)
-} : { chests: [] };
+// Use fallback data directly
+const caseOpeningDefault: any = caseOpeningFallback;
 
 // Fallback hardcoded data (jika import gagal)
 const caseOpeningFallback: any = {
@@ -298,7 +271,7 @@ const caseOpeningFallback: any = {
   }
 };
 
-const permainanDefault: any = permainanData || permainanFallback;
+const permainanDefault: any = permainanFallback;
 
 // Fallback permainan data (jika import gagal)
 const permainanFallback: any = {
