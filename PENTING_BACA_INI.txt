@@ -1,0 +1,46 @@
+═══════════════════════════════════════════════════════════════════════════════
+⚠️ PENTING - SERVER MODE SUDAH DIUBAH
+═══════════════════════════════════════════════════════════════════════════════
+
+PERUBAHAN:
+----------
+✅ Server sekarang TIDAK AUTO-RESTART secara default
+✅ Ini untuk menjaga stabilitas dan AFK fishing
+
+CARA JALANKAN:
+--------------
+Production/Live (Recommended):
+    npm run dev
+
+Development (Auto-reload):
+    npm run dev:watch
+
+KENAPA DIUBAH?
+--------------
+❌ Auto-restart mengganggu user
+❌ AFK fishing terhenti saat restart
+❌ User ter-disconnect
+❌ Session hilang
+
+✅ No-watch mode lebih stabil
+✅ AFK fishing berjalan lancar
+✅ User tidak terganggu
+
+KAPAN RESTART MANUAL?
+---------------------
+Hanya jika:
+- Ada perubahan code di server.ts
+- Ada perubahan code di api/index.ts
+- Ada bug yang perlu diperbaiki
+
+Cara restart:
+    Ctrl + C (stop)
+    npm run dev (start ulang)
+
+DOKUMENTASI LENGKAP:
+--------------------
+Baca: TENTANG_SERVER_MODE.md
+
+═══════════════════════════════════════════════════════════════════════════════
+GUNAKAN: npm run dev (bukan npm run dev:watch)
+═══════════════════════════════════════════════════════════════════════════════

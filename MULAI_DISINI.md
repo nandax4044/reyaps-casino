@@ -1,67 +1,172 @@
-# 🚀 MULAI DISINI - FIX FISHING
+# 🚀 MULAI DISINI - Quick Start Guide
 
-## ⚡ 3 LANGKAH CEPAT
+## ⚡ Langkah Cepat (5 Menit)
 
-### 1️⃣ RUN SQL (5 MENIT)
+### 1️⃣ Setup API Keys (WAJIB!)
+
+**Dapatkan keys dari Supabase:**
+👉 https://supabase.com/dashboard/project/rwngqiakigebtwxohiri/settings/api
+
+**Update file `.env`:**
+```env
+SUPABASE_URL=https://rwngqiakigebtwxohiri.supabase.co
+SUPABASE_KEY=<PASTE_ANON_PUBLIC_KEY_DISINI>
+SUPABASE_SERVICE_KEY=<PASTE_SERVICE_ROLE_KEY_DISINI>
+VITE_SUPABASE_URL=https://rwngqiakigebtwxohiri.supabase.co
+VITE_SUPABASE_KEY=<PASTE_ANON_PUBLIC_KEY_DISINI>
 ```
-1. Buka: https://supabase.com/dashboard
-2. Project: rwngqiakigebtwxohiri
-3. SQL Editor → New Query
-4. Copy paste isi file: FIX_ALL_FISHING_ISSUES.sql
-5. Klik Run
-6. Tunggu muncul: 🎉 ALL FIXES APPLIED SUCCESSFULLY!
+
+📖 **Panduan lengkap:** Baca `CARA_DAPATKAN_API_KEYS.md`
+
+---
+
+### 2️⃣ Setup Database (WAJIB!)
+
+**Jalankan SQL di Supabase:**
+👉 https://supabase.com/dashboard/project/rwngqiakigebtwxohiri/sql
+
+1. Buka file `FIX_LOGIN_ERROR.sql`
+2. Copy semua isinya
+3. Paste ke SQL Editor
+4. Klik **Run**
+
+---
+
+### 3️⃣ Jalankan Aplikasi
+
+**Satu command untuk menjalankan semuanya:**
+```bash
+npm run dev
 ```
 
-### 2️⃣ RESTART SERVER (2 MENIT)
+**PENTING:** Server sekarang **TIDAK auto-restart** untuk menjaga stabilitas!
+- ✅ Cocok untuk production/live
+- ✅ AFK fishing berjalan tanpa gangguan
+- ✅ User tidak ter-disconnect
+- ⚠️ Perlu restart manual jika ada perubahan code
+
+**Jika sedang development dan ingin auto-reload:**
+```bash
+npm run dev:watch
+```
+⚠️ **Jangan gunakan watch mode saat ada user bermain!**
+
+Ini akan menjalankan:
+- ✅ Backend API (Express) di port 3000
+- ✅ Frontend (Vite) di port 5173
+
+**Tunggu hingga muncul:**
+```
+[1] VITE v5.x.x  ready in xxx ms
+[1] ➜  Local:   http://localhost:5173/
+[0] Server running on http://localhost:3000
+```
+
+---
+
+### 4️⃣ Buka Browser
+
+**Akses aplikasi:**
+👉 http://localhost:5173
+
+**Login dengan:**
+- Username: `admin`
+- Password: `admin123`
+
+---
+
+## ❌ Troubleshooting Cepat
+
+### Error 404 pada `/api/auth/login`
+
+**Penyebab:** Backend server tidak berjalan
+
+**Solusi:**
 ```bash
 # Stop server (Ctrl+C)
-npm run dev:no-watch
-```
-**Tunggu muncul**: `[SERVER RUNNING] Full-stack Server successfully started`
-
-### 3️⃣ GRANT BAIT & TEST (5 MENIT)
-```
-1. http://localhost:3000
-2. Login: nanddev / nanda900
-3. Admin Dashboard → Fishing Management → Bait Management
-4. Grant 700 bait
-5. Fishing AFK → Start fishing
-6. Cek console: harus ada "✅✅✅ Caught ..."
+# Jalankan ulang
+npm run dev
 ```
 
----
-
-## ✅ BERHASIL JIKA:
-
-**Console Log**:
-```
-[ADMIN] ✅ Grant bait RPC success! New balance: 700
-[AFK-FISHING] ✅✅✅ Caught Orca 45LB → +9 WL (Bait: 700 → 699)
+**Cek apakah backend berjalan:**
+```bash
+curl http://localhost:3000/api/health
 ```
 
-**UI Display**:
-```
-Bait Balance: 700 → 699 → 698 ... (turun)
-Balance: 0 → 9 → 18 → 27 ... (naik)
-Total Fish: 0 → 1 → 2 → 3 ... (naik)
+Harus return:
+```json
+{"status":"ok","database":"supabase"}
 ```
 
 ---
 
-## ❌ JIKA ADA MASALAH:
+### Error 500 pada login
 
-Baca: **PANDUAN_FIX_FINAL.md** (lengkap dengan troubleshooting)
+**Penyebab:** API keys salah atau database belum di-setup
+
+**Solusi:**
+1. Cek file `.env` - keys harus dimulai dengan `eyJ...`
+2. Jalankan `FIX_LOGIN_ERROR.sql` di Supabase
+3. Restart server
+
+📖 **Panduan lengkap:** Baca `PERBAIKI_LOGIN_ERROR_500.md`
 
 ---
 
-## 📁 FILES:
+### Port sudah digunakan
 
-- **MULAI_DISINI.md** ← File ini (quick start)
-- **PANDUAN_FIX_FINAL.md** ← Panduan lengkap
-- **FIX_ALL_FISHING_ISSUES.sql** ← SQL yang harus dijalankan
+**Port 3000 digunakan:**
+```bash
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+```
+
+**Port 5173 digunakan:**
+```bash
+netstat -ano | findstr :5173
+taskkill /PID <PID> /F
+```
 
 ---
 
-**TOTAL WAKTU: 12 MENIT**
+## 📚 Dokumentasi Lengkap
 
-**MULAI SEKARANG! 🎣**
+- 🔑 **CARA_DAPATKAN_API_KEYS.md** - Cara mendapatkan API keys dari Supabase
+- 🔧 **PERBAIKI_LOGIN_ERROR_500.md** - Fix error login 500
+- 🚀 **CARA_JALANKAN_APLIKASI.md** - Panduan lengkap menjalankan aplikasi
+- 📋 **FIX_LOGIN_ERROR.sql** - SQL untuk setup database
+
+---
+
+## ✅ Checklist
+
+- [ ] Dapatkan anon public key dari Supabase
+- [ ] Dapatkan service_role key dari Supabase
+- [ ] Update file `.env` dengan keys yang benar
+- [ ] Jalankan `FIX_LOGIN_ERROR.sql` di Supabase SQL Editor
+- [ ] Install dependencies: `npm install`
+- [ ] Jalankan aplikasi: `npm run dev`
+- [ ] Buka browser: http://localhost:5173
+- [ ] Login dengan admin/admin123
+
+---
+
+## 🎯 Yang Sudah Diperbaiki
+
+✅ **Vite config** - Ditambahkan proxy untuk `/api`
+✅ **Package.json** - Script `dev` sekarang menjalankan backend + frontend
+✅ **API error handling** - Error messages lebih informatif
+✅ **Dokumentasi lengkap** - Panduan step-by-step
+
+---
+
+## 🆘 Masih Butuh Bantuan?
+
+1. Baca dokumentasi di folder ini
+2. Cek browser console (F12) untuk error
+3. Cek terminal logs untuk error backend
+4. Screenshot error dan hubungi developer
+
+---
+
+**Selamat mencoba! 🎉**

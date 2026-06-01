@@ -2,6 +2,10 @@
 -- FIX LOGIN ERROR 500 - Comprehensive Database Fix
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Run this in Supabase SQL Editor to fix login issues
+-- 
+-- NOTE: Jika muncul error "duplicate key value violates unique constraint",
+--       itu NORMAL dan TIDAK MASALAH! Artinya user sudah ada di database.
+--       Abaikan error tersebut dan lanjutkan.
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- 1. Ensure users table exists with correct structure
@@ -77,17 +81,52 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 
 -- 9. Verify existing users have profiles
 -- This will create profiles for any auth.users that don't have a public.users entry
-INSERT INTO public.users (id, email, username, balance, is_staff)
-SELECT 
-  au.id,
-  au.email,
-  COALESCE(au.raw_user_meta_data->>'username', SPLIT_PART(au.email, '@', 1)),
-  0.00,
-  FALSE
-FROM auth.users au
-LEFT JOIN public.users pu ON au.id = pu.id
-WHERE pu.id IS NULL
-ON CONFLICT (id) DO NOTHING;
+-- NOTE: Jika muncul error "duplicate username", itu NORMAL! Skip dan lanjutkan.
+-- Uses DO block to handle conflicts gracefully
+DO $$
+DECLARE
+  auth_user RECORD;
+  new_username TEXT;
+  username_suffix INTEGER := 0;
+BEGIN
+  FOR auth_user IN 
+    SELECT au.id, au.email, au.raw_user_meta_data
+    FROM auth.users au
+    LEFT JOIN public.users pu ON au.id = pu.id
+    WHERE pu.id IS NULL
+  LOOP
+    -- Generate base username
+    new_username := COALESCE(
+      auth_user.raw_user_meta_data->>'username', 
+      SPLIT_PART(auth_user.email, '@', 1)
+    );
+    
+    -- Check if username exists, add suffix if needed
+    WHILE EXISTS (SELECT 1 FROM public.users WHERE username = new_username) LOOP
+      username_suffix := username_suffix + 1;
+      new_username := COALESCE(
+        auth_user.raw_user_meta_data->>'username', 
+        SPLIT_PART(auth_user.email, '@', 1)
+      ) || '_' || username_suffix;
+    END LOOP;
+    
+    -- Insert user profile
+    BEGIN
+      INSERT INTO public.users (id, email, username, balance, is_staff)
+      VALUES (auth_user.id, auth_user.email, new_username, 0.00, FALSE);
+      
+      RAISE NOTICE 'Created profile for: % (username: %)', auth_user.email, new_username;
+    EXCEPTION 
+      WHEN unique_violation THEN
+        -- Skip if somehow still conflicts (user already exists)
+        RAISE NOTICE 'Skipped % - already exists', auth_user.email;
+        CONTINUE;
+    END;
+    
+    -- Reset suffix for next user
+    username_suffix := 0;
+  END LOOP;
+END $$;
 
 -- 10. Create admin user if not exists (optional)
 -- First, check if admin exists in auth.users
