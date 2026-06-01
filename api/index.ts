@@ -1,20 +1,40 @@
 // Vercel Serverless Function Handler
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-// Import JSON files directly
-import caseOpeningData from '../src/data/case_opening.json';
-import permainanData from '../src/data/permainan.json';
+// Import JSON files directly with error handling
+let caseOpeningData: any;
+let permainanData: any;
+
+try {
+  // Try to import directly (works in build)
+  caseOpeningData = require('../src/data/case_opening.json');
+  permainanData = require('../src/data/permainan.json');
+} catch (e) {
+  console.warn('[INIT] Failed to require JSON, trying fs.readFileSync', e);
+  try {
+    // Fallback to reading files (works in Vercel)
+    caseOpeningData = JSON.parse(readFileSync(join(__dirname, '../src/data/case_opening.json'), 'utf-8'));
+    permainanData = JSON.parse(readFileSync(join(__dirname, '../src/data/permainan.json'), 'utf-8'));
+  } catch (e2) {
+    console.error('[INIT] Failed to load JSON files:', e2);
+    // Will use fallback data below
+    caseOpeningData = { chests: [] };
+    permainanData = { prizes: [] };
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // USE IMPORTED JSON DATA (SYNCED WITH src/data/)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Use imported data, filter only published chests
-const caseOpeningDefault: any = {
+const caseOpeningDefault: any = caseOpeningData?.chests ? {
   ...caseOpeningData,
   chests: caseOpeningData.chests.filter((chest: any) => chest.published !== false)
-};
+} : { chests: [] };
 
 // Fallback hardcoded data (jika import gagal)
 const caseOpeningFallback: any = {
@@ -278,7 +298,7 @@ const caseOpeningFallback: any = {
   }
 };
 
-const permainanDefault: any = permainanData;
+const permainanDefault: any = permainanData || permainanFallback;
 
 // Fallback permainan data (jika import gagal)
 const permainanFallback: any = {
@@ -331,6 +351,13 @@ const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || supabaseKey;
 
+console.log('[SUPABASE] Config check:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseKey,
+  hasServiceKey: !!supabaseServiceKey,
+  urlPreview: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'MISSING'
+});
+
 const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
 
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseKey) : null;
@@ -339,6 +366,12 @@ const supabaseAdmin = isSupabaseConfigured
       auth: { autoRefreshToken: false, persistSession: false }
     })
   : null;
+
+console.log('[SUPABASE] Client initialized:', {
+  configured: isSupabaseConfigured,
+  hasClient: !!supabase,
+  hasAdmin: !!supabaseAdmin
+});
 
 // Password Hash
 function hashPassword(password: string): string {
