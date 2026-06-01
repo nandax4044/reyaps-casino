@@ -2,14 +2,31 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '';
+const supabaseKey = process.env.SUPABASE_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || supabaseKey;
 const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
 
 async function authenticateToken(token: string) {
   try {
-    const { data: authData } = await supabase.auth.getUser(token);
-    if (!authData?.user) return null;
-    const { data: user } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
+    const isJWT = token.length > 100 && token.startsWith('eyJ');
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token);
+    
+    let userId: string | null = null;
+    
+    if (isJWT) {
+      const { data: authData } = await supabase.auth.getUser(token);
+      if (!authData?.user) return null;
+      userId = authData.user.id;
+    } else if (isUUID) {
+      userId = token;
+    } else {
+      return null;
+    }
+
+    const { data: user } = await supabaseAdmin.from('users').select('*').eq('id', userId).single();
     return user;
   } catch (e) {
     return null;
@@ -46,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + parseInt(duration_days));
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('fishing_access')
       .upsert({
         user_id,
