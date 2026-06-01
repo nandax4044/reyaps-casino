@@ -769,105 +769,133 @@ async function handleRegister(body: any, res: any) {
 
 // ─── Login Handler ─────────────────────────────────────────────────────────────
 async function handleLogin(body: any, res: any) {
-  console.log('[LOGIN] Request received:', { loginKey: body?.loginKey, hasPassword: !!body?.password });
-  
-  const { loginKey, password } = body;
+  try {
+    console.log('[LOGIN] Request received:', { loginKey: body?.loginKey, hasPassword: !!body?.password });
+    
+    const { loginKey, password } = body;
 
-  if (!loginKey || !password) {
-    console.log('[LOGIN] Missing credentials');
-    return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
-  }
+    if (!loginKey || !password) {
+      console.log('[LOGIN] Missing credentials');
+      return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
+    }
 
-  const slugKey = loginKey.trim().toLowerCase();
-  console.log('[LOGIN] Attempting login for:', slugKey);
+    const slugKey = loginKey.trim().toLowerCase();
+    console.log('[LOGIN] Attempting login for:', slugKey);
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      let loginEmail = slugKey;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        let loginEmail = slugKey;
 
-      if (!slugKey.includes('@')) {
-        console.log('[LOGIN] Looking up username:', slugKey);
-        const { data: foundUser, error: findError } = await supabase
+        // If not an email, look up username
+        if (!slugKey.includes('@')) {
+          console.log('[LOGIN] Looking up username:', slugKey);
+          
+          const { data: foundUser, error: findError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('username', slugKey)
+            .maybeSingle();
+
+          if (findError) {
+            console.error('[LOGIN] Username lookup error:', findError);
+            return res.status(500).json({ 
+              error: 'Terjadi kesalahan saat mencari akun. Silakan coba lagi.',
+              details: findError.message 
+            });
+          }
+          
+          if (!foundUser) {
+            console.log('[LOGIN] Username not found:', slugKey);
+            return res.status(400).json({ error: 'Username tidak ditemukan! Pastikan username sudah terdaftar.' });
+          }
+
+          loginEmail = foundUser.email;
+          console.log('[LOGIN] Found email for username:', loginEmail);
+        }
+
+        console.log('[LOGIN] Attempting Supabase auth with email:', loginEmail);
+        
+        const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: loginEmail,
+          password: password
+        });
+
+        if (signInError) {
+          console.error('[LOGIN] Supabase auth error:', signInError);
+          if (signInError.message.includes('Invalid login credentials')) {
+            return res.status(400).json({ error: 'Email/Username atau Password salah!' });
+          }
+          if (signInError.message.includes('Email not confirmed')) {
+            return res.status(400).json({ error: 'Email belum dikonfirmasi. Cek inbox Anda.' });
+          }
+          return res.status(400).json({ error: 'Login gagal: ' + signInError.message });
+        }
+
+        if (!sessionData?.user || !sessionData?.session) {
+          console.error('[LOGIN] No session data returned');
+          return res.status(400).json({ error: 'Login gagal. Tidak ada sesi yang dibuat.' });
+        }
+
+        console.log('[LOGIN] Auth successful, fetching user profile:', sessionData.user.id);
+        
+        const { data: user, error: userError } = await supabase
           .from('users')
-          .select('email')
-          .eq('username', slugKey)
-          .maybeSingle();
+          .select('*')
+          .eq('id', sessionData.user.id)
+          .single();
 
-        if (findError) {
-          console.error('[LOGIN] Username lookup error:', findError);
-          return res.status(400).json({ error: 'Akun tidak ditemukan!' });
+        if (userError) {
+          console.error('[LOGIN] User profile fetch error:', userError);
+          return res.status(500).json({ 
+            error: 'Profil user tidak ditemukan di database!',
+            details: userError.message,
+            hint: 'Mungkin tabel users belum dibuat atau RLS policy bermasalah'
+          });
         }
         
-        if (!foundUser) {
-          console.log('[LOGIN] Username not found:', slugKey);
-          return res.status(400).json({ error: 'Akun tidak ditemukan!' });
+        if (!user) {
+          console.error('[LOGIN] User profile not found');
+          return res.status(400).json({ error: 'Profil user tidak ditemukan! Silakan hubungi admin.' });
         }
 
-        loginEmail = foundUser.email;
-        console.log('[LOGIN] Found email for username:', loginEmail);
+        console.log('[LOGIN] Login successful for user:', user.username);
+        const { password: _, ...safeUser } = user as any;
+        return res.json({
+          success: true,
+          user: safeUser,
+          token: sessionData.session.access_token
+        });
+
+      } catch (e: any) {
+        console.error('[LOGIN] Supabase Exception:', e);
+        console.error('[LOGIN] Stack trace:', e.stack);
+        return res.status(500).json({ 
+          error: 'Terjadi kesalahan pada database: ' + e.message,
+          stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
+        });
       }
-
-      console.log('[LOGIN] Attempting Supabase auth with email:', loginEmail);
-      const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: password
-      });
-
-      if (signInError) {
-        console.error('[LOGIN] Supabase auth error:', signInError);
-        if (signInError.message.includes('Invalid login credentials')) {
-          return res.status(400).json({ error: 'Email/Username atau Password salah!' });
-        }
-        return res.status(400).json({ error: signInError.message });
-      }
-
-      if (!sessionData?.user || !sessionData?.session) {
-        console.error('[LOGIN] No session data returned');
-        return res.status(400).json({ error: 'Login gagal. Coba lagi.' });
-      }
-
-      console.log('[LOGIN] Auth successful, fetching user profile:', sessionData.user.id);
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', sessionData.user.id)
-        .single();
-
-      if (userError) {
-        console.error('[LOGIN] User profile fetch error:', userError);
-        return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
-      }
-      
+    } else {
+      // Local memory mode
+      console.log('[LOGIN] Using local memory mode');
+      const user = localDb.users.find(u => u.email === slugKey || u.username === slugKey);
       if (!user) {
-        console.error('[LOGIN] User profile not found');
-        return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
+        return res.status(400).json({ error: 'Akun tidak terdaftar!' });
       }
 
-      console.log('[LOGIN] Login successful for user:', user.username);
-      const { password: _, ...safeUser } = user as any;
-      return res.json({
-        success: true,
-        user: safeUser,
-        token: sessionData.session.access_token
-      });
+      if (user.password !== hashPassword(password)) {
+        return res.status(400).json({ error: 'Password yang diinput salah!' });
+      }
 
-    } catch (e: any) {
-      console.error('[LOGIN] Exception:', e);
-      return res.status(500).json({ error: 'Database service failure: ' + e.message });
+      const { password: _, ...safeUser } = user;
+      return res.json({ success: true, user: safeUser, token: user.id });
     }
-  } else {
-    console.log('[LOGIN] Using local memory mode');
-    const user = localDb.users.find(u => u.email === slugKey || u.username === slugKey);
-    if (!user) {
-      return res.status(400).json({ error: 'Akun tidak terdaftar!' });
-    }
-
-    if (user.password !== hashPassword(password)) {
-      return res.status(400).json({ error: 'Password yang diinput salah!' });
-    }
-
-    const { password: _, ...safeUser } = user;
-    return res.json({ success: true, user: safeUser, token: user.id });
+  } catch (outerError: any) {
+    console.error('[LOGIN] Outer Exception:', outerError);
+    console.error('[LOGIN] Outer Stack:', outerError.stack);
+    return res.status(500).json({ 
+      error: 'Terjadi kesalahan sistem: ' + outerError.message,
+      stack: process.env.NODE_ENV === 'development' ? outerError.stack : undefined
+    });
   }
 }
 

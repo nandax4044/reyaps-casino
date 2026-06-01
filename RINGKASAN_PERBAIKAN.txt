@@ -1,0 +1,55 @@
+═══════════════════════════════════════════════════════════════════════════════
+🔧 RINGKASAN PERBAIKAN ERROR LOGIN 500
+═══════════════════════════════════════════════════════════════════════════════
+
+MASALAH:
+--------
+Error 500 saat login karena API Key Supabase yang salah.
+Key yang digunakan: sb_publishable_... (SALAH!)
+Key yang benar harus dimulai dengan: eyJ... (format JWT)
+
+SOLUSI CEPAT:
+-------------
+1. Buka: https://supabase.com/dashboard/project/rwngqiakigebtwxohiri/settings/api
+2. Copy "anon public" key (dimulai dengan eyJ...)
+3. Copy "service_role" key (dimulai dengan eyJ...)
+4. Update file .env dengan keys yang benar
+5. Jalankan FIX_LOGIN_ERROR.sql di Supabase SQL Editor
+6. Restart server: npm run dev
+7. Test login
+
+FILE YANG SUDAH DIBUAT:
+-----------------------
+✅ FIX_LOGIN_ERROR.sql          - SQL untuk setup database
+✅ FIX_LOGIN_INSTRUCTIONS.md    - Panduan lengkap dengan gambar
+✅ PERBAIKI_LOGIN_ERROR_500.md  - Panduan detail step-by-step
+✅ api/index.ts                 - Sudah diperbaiki dengan error handling lebih baik
+
+PERUBAHAN YANG SUDAH DILAKUKAN:
+--------------------------------
+✅ Menambahkan error handling yang lebih baik di handleLogin()
+✅ Menambahkan logging detail untuk debugging
+✅ Memperbaiki error messages agar lebih informatif
+✅ Update .env dengan placeholder yang jelas
+✅ Update .env.example dengan instruksi lengkap
+
+LANGKAH SELANJUTNYA:
+--------------------
+1. Dapatkan API keys yang benar dari Supabase Dashboard
+2. Update file .env (ganti YOUR_ANON_KEY_HERE dan YOUR_SERVICE_ROLE_KEY_HERE)
+3. Jalankan FIX_LOGIN_ERROR.sql di Supabase
+4. Restart server
+5. Test login
+
+CATATAN PENTING:
+----------------
+- Keys harus dimulai dengan eyJ... (format JWT)
+- SUPABASE_KEY = anon public key
+- SUPABASE_SERVICE_KEY = service_role key
+- VITE_SUPABASE_KEY = sama dengan SUPABASE_KEY (anon public)
+
+DOKUMENTASI LENGKAP:
+--------------------
+Baca file: PERBAIKI_LOGIN_ERROR_500.md untuk panduan lengkap
+
+═══════════════════════════════════════════════════════════════════════════════
