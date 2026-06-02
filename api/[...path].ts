@@ -380,7 +380,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // AFK status
       if (path === '/fishing/afk/status' && method === 'GET') {
-        return res.json({ isActive: false, message: 'AFK system unavailable' });
+        if (isSupabaseConfigured && supabase) {
+          const { data: session } = await supabase
+            .from('afk_fishing_sessions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (session) {
+            // Update heartbeat
+            await supabase
+              .from('afk_fishing_sessions')
+              .update({ last_heartbeat: new Date().toISOString() })
+              .eq('id', session.id);
+
+            return res.json({ 
+              isActive: true, 
+              session: {
+                started_at: session.started_at,
+                equipped_rod: session.equipped_rod,
+                duration_minutes: Math.floor((Date.now() - new Date(session.started_at).getTime()) / 60000)
+              }
+            });
+          }
+        }
+        return res.json({ isActive: false });
       }
 
       // Fishing logs
@@ -405,12 +430,92 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Start AFK
       if (path === '/fishing/afk/start' && method === 'POST') {
-        return res.json({ success: false, message: 'AFK system unavailable' });
+        const { rod_id } = body;
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          try {
+            // Check if already has active session
+            const { data: existing } = await supabaseAdmin
+              .from('afk_fishing_sessions')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('is_active', true)
+              .maybeSingle();
+
+            if (existing) {
+              return res.json({ 
+                success: true, 
+                message: 'AFK fishing already running',
+                session: existing 
+              });
+            }
+
+            // Check bait
+            const { data: inventory } = await supabaseAdmin
+              .from('fishing_inventory')
+              .select('bait')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (!inventory || inventory.bait <= 0) {
+              return res.status(400).json({ error: 'Tidak ada bait! Hubungi admin untuk mendapat bait.' });
+            }
+
+            // Create AFK session
+            const { data: session } = await supabaseAdmin
+              .from('afk_fishing_sessions')
+              .insert({
+                user_id: user.id,
+                username: user.username,
+                equipped_rod: rod_id || 'basic_rod',
+                is_active: true,
+                started_at: new Date().toISOString(),
+                last_heartbeat: new Date().toISOString()
+              })
+              .select('*')
+              .single();
+
+            return res.json({ 
+              success: true, 
+              message: 'AFK fishing started! Browser bisa ditutup.',
+              session 
+            });
+          } catch (e: any) {
+            console.error('[START AFK] Error:', e);
+            return res.status(500).json({ error: 'Gagal start AFK: ' + e.message });
+          }
+        }
+        return res.status(500).json({ error: 'Database not configured' });
       }
 
       // Stop AFK
       if (path === '/fishing/afk/stop' && method === 'POST') {
-        return res.json({ success: false, message: 'AFK system unavailable' });
+        if (isSupabaseConfigured && supabaseAdmin) {
+          try {
+            const { data: session } = await supabaseAdmin
+              .from('afk_fishing_sessions')
+              .update({ is_active: false, updated_at: new Date().toISOString() })
+              .eq('user_id', user.id)
+              .eq('is_active', true)
+              .select('*')
+              .maybeSingle();
+
+            if (session) {
+              const duration = Math.floor((Date.now() - new Date(session.started_at).getTime()) / 60000);
+              return res.json({ 
+                success: true, 
+                message: `AFK fishing stopped. Duration: ${duration} minutes`,
+                session 
+              });
+            }
+
+            return res.json({ success: true, message: 'No active AFK session' });
+          } catch (e: any) {
+            console.error('[STOP AFK] Error:', e);
+            return res.status(500).json({ error: 'Gagal stop AFK: ' + e.message });
+          }
+        }
+        return res.status(500).json({ error: 'Database not configured' });
       }
     }
 

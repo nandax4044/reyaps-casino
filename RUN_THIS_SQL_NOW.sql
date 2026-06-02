@@ -60,7 +60,7 @@ GRANT ALL ON user_rods TO service_role, anon, authenticated;
 -- ============================================================================
 -- TABLE 3: fishing_inventory
 -- ============================================================================
-CREATE TABLE fishing_inventory (
+CREATE TABLE IF NOT EXISTS fishing_inventory (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
   bait INTEGER DEFAULT 0 NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE fishing_inventory (
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
-CREATE INDEX idx_fishing_inventory_user_id ON fishing_inventory(user_id);
+CREATE INDEX IF NOT EXISTS idx_fishing_inventory_user_id ON fishing_inventory(user_id);
 
 ALTER TABLE fishing_inventory ENABLE ROW LEVEL SECURITY;
 
@@ -98,6 +98,30 @@ ALTER TABLE fish_inventory ENABLE ROW LEVEL SECURITY;
 CREATE POLICY fish_inventory_all ON fish_inventory FOR ALL USING (TRUE) WITH CHECK (TRUE);
 
 GRANT ALL ON fish_inventory TO service_role, anon, authenticated;
+
+-- ============================================================================
+-- TABLE 5: afk_fishing_sessions (for persistent AFK)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS afk_fishing_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  username TEXT NOT NULL,
+  equipped_rod TEXT NOT NULL DEFAULT 'basic_rod',
+  is_active BOOLEAN DEFAULT TRUE,
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  last_heartbeat TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_afk_sessions_user_id ON afk_fishing_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_afk_sessions_active ON afk_fishing_sessions(is_active);
+
+ALTER TABLE afk_fishing_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY afk_sessions_all ON afk_fishing_sessions FOR ALL USING (TRUE) WITH CHECK (TRUE);
+
+GRANT ALL ON afk_fishing_sessions TO service_role, anon, authenticated;
 
 -- ============================================================================
 -- VERIFY SUCCESS
