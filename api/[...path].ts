@@ -346,7 +346,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         if (isSupabaseConfigured && supabase) {
           const { data, error } = await supabase
-            .from('fishing_inventory')
+            .from('user_fishing_inventory')
             .select('*')
             .eq('user_id', user.id)
             .maybeSingle();
@@ -355,26 +355,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error('[USER FISHING INVENTORY] Database error:', error);
           }
 
-          const inventoryData = data || { user_id: user.id, bait: 0, fishing_saldo: 0 };
+          const inventoryData = data || { 
+            user_id: user.id, 
+            bait_balance: 0, 
+            fishing_saldo: 0,
+            equipped_rod: 'basic_rod',
+            total_fish_caught: 0
+          };
           
           console.log('[USER FISHING INVENTORY] Raw data from DB:', data);
-          console.log('[USER FISHING INVENTORY] Sending response with bait_balance:', inventoryData.bait);
+          console.log('[USER FISHING INVENTORY] Sending response with bait_balance:', inventoryData.bait_balance);
           
           return res.json({
-            inventory: {
-              ...inventoryData,
-              bait_balance: inventoryData.bait // Frontend compatibility
-            }
+            inventory: inventoryData
           });
         }
         
         console.log('[USER FISHING INVENTORY] Supabase not configured, returning default');
-        const defaultData = { user_id: user.id, bait: 0, fishing_saldo: 0 };
+        const defaultData = { 
+          user_id: user.id, 
+          bait_balance: 0, 
+          fishing_saldo: 0,
+          equipped_rod: 'basic_rod',
+          total_fish_caught: 0
+        };
         return res.json({ 
-          inventory: {
-            ...defaultData,
-            bait_balance: 0
-          }
+          inventory: defaultData
         });
       }
 
@@ -398,6 +404,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.json({ rods });
         }
         return res.json({ rods: [{ rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true }] });
+      }
+
+      // Equip rod
+      if (path === '/fishing/equip-rod' && method === 'POST') {
+        const { rod } = body;
+
+        console.log('[EQUIP ROD] Request from user:', user.id, 'rod:', rod);
+
+        if (!rod) {
+          return res.status(400).json({ error: 'Rod ID is required' });
+        }
+
+        if (isSupabaseConfigured && supabase) {
+          try {
+            // Upsert equipped_rod in user_fishing_inventory
+            const { data: updated, error: updateError } = await supabase
+              .from('user_fishing_inventory')
+              .upsert({
+                user_id: user.id,
+                equipped_rod: rod,
+                bait_balance: 0,  // Set defaults for first-time creation
+                fishing_saldo: 0,
+                total_fish_caught: 0,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id',
+                ignoreDuplicates: false
+              })
+              .select('*')
+              .single();
+
+            if (updateError) {
+              console.error('[EQUIP ROD] Update error:', updateError);
+              return res.status(500).json({ error: 'Failed to equip rod: ' + updateError.message });
+            }
+
+            console.log('[EQUIP ROD] Success:', rod, 'Updated data:', updated);
+            return res.json({ 
+              success: true, 
+              equipped_rod: rod, 
+              message: 'Rod equipped successfully',
+              inventory: updated
+            });
+          } catch (e: any) {
+            console.error('[EQUIP ROD] Exception:', e);
+            return res.status(500).json({ error: 'Failed to equip rod: ' + e.message });
+          }
+        }
+
+        console.log('[EQUIP ROD] Database not configured');
+        return res.status(500).json({ error: 'Database not configured' });
       }
 
       // AFK status
@@ -477,19 +534,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Check bait
             const { data: inventory, error: invError } = await supabaseAdmin
-              .from('fishing_inventory')
-              .select('bait')
+              .from('user_fishing_inventory')
+              .select('bait_balance, equipped_rod')
               .eq('user_id', user.id)
               .maybeSingle();
 
             console.log('[AFK START] Inventory check:', { inventory, error: invError });
 
-            if (!inventory || inventory.bait <= 0) {
-              console.log('[AFK START] No bait available. Bait:', inventory?.bait || 0);
+            if (!inventory || inventory.bait_balance <= 0) {
+              console.log('[AFK START] No bait available. Bait:', inventory?.bait_balance || 0);
               return res.status(400).json({ error: 'Tidak ada bait! Hubungi admin untuk mendapat bait.' });
             }
 
-            console.log('[AFK START] Bait available:', inventory.bait);
+            console.log('[AFK START] Bait available:', inventory.bait_balance);
+
+            // Use equipped rod from inventory, or rod_id from request, or default
+            const finalRod = inventory.equipped_rod || rod_id || 'basic_rod';
+            console.log('[AFK START] Using rod:', finalRod);
 
             // Create AFK session
             const { data: session } = await supabaseAdmin
@@ -497,7 +558,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .insert({
                 user_id: user.id,
                 username: user.username,
-                equipped_rod: rod_id || 'basic_rod',
+                equipped_rod: finalRod,
                 is_active: true,
                 started_at: new Date().toISOString(),
                 last_heartbeat: new Date().toISOString()
@@ -772,23 +833,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Get current bait
             const { data: inventory } = await supabaseAdmin
-              .from('fishing_inventory')
-              .select('bait')
+              .from('user_fishing_inventory')
+              .select('bait_balance')
               .eq('user_id', user_id)
               .maybeSingle();
 
-            const currentBait = inventory?.bait || 0;
+            const currentBait = inventory?.bait_balance || 0;
             const newBait = currentBait + amount;
 
             console.log('[GRANT BAIT] Bait:', { current: currentBait, adding: amount, new: newBait });
 
             // Upsert inventory
             const { data: updated, error: upsertError } = await supabaseAdmin
-              .from('fishing_inventory')
+              .from('user_fishing_inventory')
               .upsert({
                 user_id: user_id,
-                bait: newBait,
+                bait_balance: newBait,
                 fishing_saldo: inventory?.fishing_saldo || 0,
+                equipped_rod: inventory?.equipped_rod || 'basic_rod',
+                total_fish_caught: inventory?.total_fish_caught || 0,
                 updated_at: new Date().toISOString()
               }, {
                 onConflict: 'user_id'
@@ -805,10 +868,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             return res.json({ 
               success: true, 
-              inventory: {
-                ...updated,
-                bait_balance: updated.bait // For frontend compatibility
-              }
+              inventory: updated
             });
           } catch (e: any) {
             console.error('[GRANT BAIT] Exception:', e);
@@ -824,21 +884,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (isSupabaseConfigured && supabaseAdmin) {
           const { data: inventory } = await supabaseAdmin
-            .from('fishing_inventory')
+            .from('user_fishing_inventory')
             .select('*')
             .eq('user_id', userId)
             .maybeSingle();
 
-          // Return with both bait and bait_balance for compatibility
-          const result = inventory || { user_id: userId, bait: 0, fishing_saldo: 0 };
-          return res.json({ 
-            inventory: {
-              ...result,
-              bait_balance: result.bait // Frontend expects bait_balance
-            }
-          });
+          const result = inventory || { 
+            user_id: userId, 
+            bait_balance: 0, 
+            fishing_saldo: 0,
+            equipped_rod: 'basic_rod',
+            total_fish_caught: 0
+          };
+          return res.json({ inventory: result });
         }
-        return res.json({ inventory: { user_id: userId, bait: 0, bait_balance: 0, fishing_saldo: 0 } });
+        return res.json({ 
+          inventory: { 
+            user_id: userId, 
+            bait_balance: 0, 
+            fishing_saldo: 0,
+            equipped_rod: 'basic_rod',
+            total_fish_caught: 0
+          } 
+        });
       }
     }
 
