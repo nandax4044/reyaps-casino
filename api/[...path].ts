@@ -1,16 +1,14 @@
-// Vercel Serverless Catch-All Handler
-// Handles ALL /api/* endpoints in a single function (Vercel Hobby plan limit: 12 functions)
+// Vercel Serverless Catch-All Handler - FISHING FOCUSED
+// Handles ALL /api/* endpoints in a single function
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
 
-// Supabase config
 const supabaseUrl = process.env.SUPABASE_URL || 'https://rwngqiakigebtwxohiri.supabase.co';
 const supabaseKey = process.env.SUPABASE_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || supabaseKey;
 
 const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
-
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseKey) : null;
 const supabaseAdmin = isSupabaseConfigured 
   ? createClient(supabaseUrl, supabaseServiceKey, {
@@ -18,12 +16,10 @@ const supabaseAdmin = isSupabaseConfigured
     })
   : null;
 
-// Helper functions
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-// Local fallback data
 const localDb = {
   users: [
     {
@@ -38,453 +34,245 @@ const localDb = {
   ]
 };
 
-// Authenticate token and return user
 async function authenticateToken(token: string): Promise<any | null> {
-  if (!token) {
-    console.log('[AUTH] Token is empty or null');
-    return null;
-  }
-
-  try {
-    if (isSupabaseConfigured && supabase) {
-      console.log('[AUTH] Validating Supabase token');
-      
+  if (isSupabaseConfigured && supabase) {
+    try {
       const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      
-      if (authError) {
-        console.error('[AUTH] getUser failed:', authError.message || authError);
-        return null;
-      }
-
-      if (!authData?.user?.id) {
-        console.log('[AUTH] No user in auth response');
-        return null;
-      }
-
-      const userId = authData.user.id;
-      console.log('[AUTH] Auth verified, fetching profile for:', userId);
+      if (authError || !authData?.user) return null;
 
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
+        .eq('id', authData.user.id)
         .single();
 
-      if (userError) {
-        console.error('[AUTH] Profile query failed:', userError.message);
-        return null;
-      }
-      
-      if (!user) {
-        console.log('[AUTH] User not found in database');
-        return null;
-      }
-      
-      console.log('[AUTH] ✅ User authenticated');
+      if (userError || !user) return null;
       return user;
-    } else {
-      console.log('[AUTH] Supabase not configured, using local lookup');
-      const localUser = localDb.users.find(u => u.id === token);
-      if (localUser) {
-        console.log('[AUTH] ✅ Local user found');
-      } else {
-        console.log('[AUTH] Local user not found');
-      }
-      return localUser || null;
+    } catch (e) {
+      return null;
     }
-  } catch (e: any) {
-    console.error('[AUTH] Unexpected error:', e?.message);
-    return null;
+  } else {
+    return localDb.users.find(u => u.id === token) || null;
   }
 }
 
-// Main handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS headers first
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Content-Type', 'application/json');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // Wrap EVERYTHING in try-catch to prevent crashes
+  const pathSegments = req.query.path;
+  const path = Array.isArray(pathSegments) ? `/${pathSegments.join('/')}` : `/${pathSegments || ''}`;
+  const method = req.method || 'GET';
+  const body = req.body || {};
+
   try {
-    // Parse request
-    const pathSegments = req.query.path;
-    const path = Array.isArray(pathSegments) ? `/${pathSegments.join('/')}` : `/${pathSegments || ''}`;
-    const method = req.method || 'GET';
-    
-    // Safe body parsing
-    let body: any = {};
-    if (req.body) {
-      if (typeof req.body === 'string') {
-        try {
-          body = JSON.parse(req.body);
-        } catch (e) {
-          body = {};
-        }
-      } else {
-        body = req.body;
-      }
-    }
-
-    console.log(`[API] ${method} ${path}`);
-
-    // ==================== DEBUG ENDPOINT ====================
-    if (path === '/debug/info' && method === 'GET') {
-      return res.json({
-        timestamp: new Date().toISOString(),
-        supabaseConfigured: isSupabaseConfigured,
-        nodeEnv: process.env.NODE_ENV,
-        status: 'OK'
-      });
-    }
-
-    // ==================== AUTH: LOGIN ====================
+    // ==================== AUTH ROUTES ====================
     if (path === '/auth/login' && method === 'POST') {
-      const loginKey = body?.loginKey || '';
-      const password = body?.password || '';
-
+      const { loginKey, password } = body;
       if (!loginKey || !password) {
         return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
       }
 
-      const slugKey = String(loginKey).trim().toLowerCase();
-      const slugPassword = String(password).trim();
+      const slugKey = loginKey.trim().toLowerCase();
 
-      // Try local first
-      try {
-        const localUser = localDb.users.find(u => 
-          (u.email && u.email.toLowerCase() === slugKey) || 
-          (u.username && u.username.toLowerCase() === slugKey)
-        );
-
-        if (localUser && localUser.password === hashPassword(slugPassword)) {
-          const { password: _, ...safeUser } = localUser;
-          console.log('[LOGIN] ✅ Local auth success');
-          return res.status(200).json({
-            success: true,
-            user: safeUser,
-            access_token: localUser.id,
-            token: localUser.id
-          });
-        }
-      } catch (localErr: any) {
-        console.log('[LOGIN] Local auth check error:', localErr?.message);
-      }
-
-      // Try Supabase if configured
       if (isSupabaseConfigured && supabase) {
         try {
           let loginEmail = slugKey;
-
-          // Look up by username if not email format
           if (!slugKey.includes('@')) {
-            try {
-              const { data: foundUser } = await supabase
-                .from('users')
-                .select('email')
-                .eq('username', slugKey)
-                .maybeSingle();
+            const { data: foundUser } = await supabase
+              .from('users')
+              .select('email')
+              .eq('username', slugKey)
+              .maybeSingle();
 
-              if (foundUser) {
-                loginEmail = foundUser.email;
-              }
-            } catch (e: any) {
-              console.log('[LOGIN] Username lookup error:', e?.message);
-            }
+            if (foundUser) loginEmail = foundUser.email;
+            else return res.status(400).json({ error: 'Akun tidak ditemukan!' });
           }
 
-          // Sign in
-          const { data: sessionData } = await supabase.auth.signInWithPassword({
+          const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
             email: loginEmail,
-            password: slugPassword
+            password: password
           });
 
-          if (sessionData?.session) {
-            // Get user profile
-            const { data: user } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', sessionData.user.id)
-              .single();
-
-            if (user) {
-              const { password: _, ...safeUser } = user as any;
-              console.log('[LOGIN] ✅ Supabase auth success');
-              return res.status(200).json({
-                success: true,
-                user: safeUser,
-                access_token: sessionData.session.access_token,
-                token: sessionData.session.access_token,
-                refresh_token: sessionData.session.refresh_token
-              });
-            }
+          if (signInError || !sessionData?.session) {
+            return res.status(400).json({ error: 'Email/Username atau Password salah!' });
           }
 
-          console.log('[LOGIN] Supabase auth failed');
-          return res.status(401).json({ error: 'Email/Username atau Password salah!' });
+          const { data: user } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', sessionData.user.id)
+            .single();
 
-        } catch (sbErr: any) {
-          console.log('[LOGIN] Supabase error:', sbErr?.message);
-          return res.status(401).json({ error: 'Email/Username atau Password salah!' });
+          if (!user) return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
+
+          const { password: _, ...safeUser } = user as any;
+          return res.json({
+            success: true,
+            user: safeUser,
+            access_token: sessionData.session.access_token,
+            refresh_token: sessionData.session.refresh_token
+          });
+        } catch (e: any) {
+          return res.status(500).json({ error: e.message });
         }
+      } else {
+        const user = localDb.users.find(u => u.email === slugKey || u.username === slugKey);
+        if (!user || user.password !== hashPassword(password)) {
+          return res.status(400).json({ error: 'Email/Username atau Password salah!' });
+        }
+        const { password: _, ...safeUser } = user;
+        return res.json({ success: true, user: safeUser, access_token: user.id });
       }
-
-      // No auth worked
-      return res.status(401).json({ error: 'Akun tidak ditemukan!' });
     }
 
-    // ==================== AUTH: REGISTER ====================
     if (path === '/auth/register' && method === 'POST') {
-      const email = String(body?.email || '').trim().toLowerCase();
-      const username = String(body?.username || '').trim().toLowerCase();
-      const password = String(body?.password || '').trim();
-
+      const { email, username, password } = body;
       if (!email || !username || !password) {
-        return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
+        return res.status(400).json({ error: 'Semua field wajib diisi!' });
       }
 
-      // Check local duplicates
-      try {
-        const localDuplicate = localDb.users.find(u =>
-          u.email.toLowerCase() === email || u.username.toLowerCase() === username
-        );
-        if (localDuplicate) {
-          return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
-        }
-      } catch (e: any) {
-        console.log('[REGISTER] Local duplicate check error:', e?.message);
-      }
+      const slugEmail = email.trim().toLowerCase();
+      const slugUsername = username.trim().toLowerCase();
 
-      // Try Supabase if configured
       if (isSupabaseConfigured && supabase) {
         try {
-          // Sign up
-          const { data: authData } = await supabase.auth.signUp({
-            email: email,
+          const { data: existing } = await supabase
+            .from('users')
+            .select('id')
+            .eq('username', slugUsername)
+            .maybeSingle();
+
+          if (existing) return res.status(400).json({ error: 'Username sudah digunakan!' });
+
+          const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: slugEmail,
             password: password,
-            options: { data: { username: username } }
+            options: { data: { username: slugUsername } }
           });
 
-          if (authData?.user) {
-            const userId = authData.user.id;
+          if (authError) return res.status(400).json({ error: authError.message });
+          if (!authData?.user) return res.status(500).json({ error: 'Gagal membuat akun' });
 
-            // Wait for trigger
-            await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise(resolve => setTimeout(resolve, 800));
 
-            // Check if profile was created
-            const { data: user } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', userId)
-              .single();
+          const { data: user } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .maybeSingle();
 
-            if (user) {
-              const { password: _, ...safeUser } = user as any;
-              console.log('[REGISTER] ✅ Supabase registration success');
-              const token = authData.session?.access_token || userId;
-              return res.status(200).json({
-                success: true,
-                user: safeUser,
-                access_token: token,
-                token: token
-              });
-            } else {
-              // Try manual insert
-              try {
-                const { data: manualUser } = await supabase
-                  .from('users')
-                  .insert({
-                    id: userId,
-                    email: email,
-                    username: username,
-                    balance: 0,
-                    is_staff: false
-                  })
-                  .select('*')
-                  .single();
-
-                if (manualUser) {
-                  const { password: _, ...safeUser } = manualUser as any;
-                  console.log('[REGISTER] ✅ Manual profile creation success');
-                  const token = authData.session?.access_token || userId;
-                  return res.status(200).json({
-                    success: true,
-                    user: safeUser,
-                    access_token: token,
-                    token: token
-                  });
-                }
-              } catch (insertErr: any) {
-                console.log('[REGISTER] Manual insert error:', insertErr?.message);
-              }
-            }
+          if (user) {
+            const { password: _, ...safeUser } = user as any;
+            const token = authData.session?.access_token || authData.user.id;
+            return res.json({ success: true, user: safeUser, access_token: token, refresh_token: authData.session?.refresh_token });
           }
 
-          return res.status(400).json({ error: 'Registration failed' });
+          const { data: manualUser } = await supabase
+            .from('users')
+            .insert({
+              id: authData.user.id,
+              email: slugEmail,
+              username: slugUsername,
+              balance: 0,
+              is_staff: false
+            })
+            .select('*')
+            .single();
 
-        } catch (sbRegErr: any) {
-          console.log('[REGISTER] Supabase error:', sbRegErr?.message);
-          
-          if (sbRegErr?.message?.includes('already registered')) {
-            return res.status(400).json({ error: 'Email sudah terdaftar!' });
+          if (manualUser) {
+            const { password: _, ...safeUser } = manualUser as any;
+            const token = authData.session?.access_token || authData.user.id;
+            return res.json({ success: true, user: safeUser, access_token: token, refresh_token: authData.session?.refresh_token });
           }
-          return res.status(400).json({ error: 'Registration failed: ' + (sbRegErr?.message || 'Unknown error') });
+
+          return res.status(500).json({ error: 'Gagal membuat profil' });
+        } catch (e: any) {
+          return res.status(500).json({ error: e.message });
         }
-      }
+      } else {
+        const duplicate = localDb.users.find(u => u.email === slugEmail || u.username === slugUsername);
+        if (duplicate) return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
 
-      // Local registration fallback
-      try {
         const newUser = {
           id: crypto.randomUUID(),
-          email: email,
-          username: username,
+          email: slugEmail,
+          username: slugUsername,
           password: hashPassword(password),
           balance: 0,
-          is_staff: username === 'admin',
+          is_staff: false,
           created_at: new Date().toISOString()
         };
 
         localDb.users.push(newUser);
         const { password: _, ...safeUser } = newUser;
-        console.log('[REGISTER] ✅ Local registration success');
-        return res.status(200).json({
-          success: true,
-          user: safeUser,
-          access_token: newUser.id,
-          token: newUser.id
-        });
-      } catch (localRegErr: any) {
-        console.log('[REGISTER] Local registration error:', localRegErr?.message);
-        return res.status(500).json({ error: 'Registration failed' });
+        return res.json({ success: true, user: safeUser, access_token: newUser.id });
       }
     }
 
-    // ==================== 404 ====================
-    return res.status(404).json({ 
-      error: 'Endpoint not found',
-      path: path
-    });
-
-  } catch (outerErr: any) {
-    console.error('[CRITICAL ERROR]', outerErr?.message || String(outerErr));
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: outerErr?.message || 'Unknown error'
-    });
-  }
-}
-      return res.status(401).json({ error: 'Sesi tidak valid atau telah berakhir. Silakan login kembali.' });
+    // ==================== PROTECTED ROUTES ====================
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Sesi tidak valid.' });
     }
 
     const token = authHeader.split(' ')[1];
-    if (!token || token.length === 0) {
-      console.log('[AUTH] Empty token');
-      return res.status(401).json({ error: 'Token tidak valid.' });
-    }
-
-    console.log('[AUTH] Authenticating token...');
-    let user: any = null;
-    
-    try {
-      user = await authenticateToken(token);
-    } catch (authErr: any) {
-      console.error('[AUTH] Authentication error:', authErr?.message);
-      return res.status(500).json({ error: 'Authentication service error', details: authErr?.message });
-    }
+    const user = await authenticateToken(token);
     
     if (!user) {
-      console.log('[AUTH] User authentication failed - token invalid or user not found');
-      return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa. Silakan login ulang.' });
+      return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa.' });
     }
-
-    console.log('[AUTH] ✅ User authenticated:', user.id);
 
     // User profile
     if (path === '/user/profile' && method === 'GET') {
-      try {
-        console.log('[PROFILE] Getting profile for user:', user?.id);
-        
-        if (!user || typeof user !== 'object') {
-          console.error('[PROFILE] Invalid user object:', typeof user);
-          return res.status(500).json({ error: 'Invalid user object' });
-        }
-        
-        // Create a copy to avoid modifying the original
-        const profileData = { ...user };
-        
-        // Remove sensitive fields
-        delete profileData.password;
-        delete profileData.password_hash;
-        
-        console.log('[PROFILE] ✅ Sending profile:', Object.keys(profileData));
-        
-        return res.json({ 
-          user: profileData, 
-          database: isSupabaseConfigured ? 'supabase' : 'mock_memory',
-          success: true
-        });
-      } catch (profileError: any) {
-        console.error('[PROFILE] Exception:', profileError?.message);
-        return res.status(500).json({ 
-          error: 'Failed to get profile',
-          details: profileError?.message || 'Unknown error'
-        });
-      }
+      const { password: _, ...safeUser } = user;
+      return res.json({ user: safeUser, database: isSupabaseConfigured ? 'supabase' : 'mock_memory' });
     }
 
     // User inventory
     if (path === '/user/inventory' && method === 'GET') {
       if (isSupabaseConfigured && supabase) {
-        const { data: items, error } = await supabase
+        const { data: items } = await supabase
           .from('inventory')
           .select('*')
           .eq('user_id', user.id)
           .order('obtained_at', { ascending: false });
 
-        if (error) throw error;
-        return res.json({ inventory: items });
-      } else {
-        return res.json({ inventory: [] });
+        return res.json({ inventory: items || [] });
       }
+      return res.json({ inventory: [] });
     }
 
     // Deduct balance
     if (path === '/user/deduct' && method === 'POST') {
       const { cost } = body;
       if (cost === undefined || cost < 0) {
-        return res.status(400).json({ error: 'Harga spin tidak valid' });
+        return res.status(400).json({ error: 'Harga tidak valid' });
       }
 
       const currentBalance = parseFloat(user.balance);
       if (currentBalance < cost) {
-        return res.status(400).json({ error: 'Saldo Anda tidak mencukupi untuk bermain!' });
+        return res.status(400).json({ error: 'Saldo tidak mencukupi!' });
       }
 
       const newBalance = currentBalance - cost;
 
       if (isSupabaseConfigured && supabase) {
-        const { data: updatedUser, error } = await supabase
+        const { data: updatedUser } = await supabase
           .from('users')
           .update({ balance: newBalance })
           .eq('id', user.id)
           .select('balance')
           .single();
 
-        if (error) throw error;
         return res.json({ success: true, balance: updatedUser.balance });
-      } else {
-        const userInDb = localDb.users.find(u => u.id === user.id);
-        if (userInDb) {
-          userInDb.balance = newBalance;
-          return res.json({ success: true, balance: newBalance });
-        }
-        return res.status(404).json({ error: 'User not found' });
       }
+      return res.json({ success: true, balance: newBalance });
     }
 
     // Add win
@@ -506,7 +294,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isSupabaseConfigured && supabase) {
         let invItem = null;
         if (name) {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('inventory')
             .insert({ 
               user_id: user.id, 
@@ -519,369 +307,216 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .select('*')
             .single();
-          if (error) throw error;
           invItem = data;
         }
 
-        const { data: updatedUser, error: balError } = await supabase
+        const { data: updatedUser } = await supabase
           .from('users')
           .update({ balance: finalBalance })
           .eq('id', user.id)
           .select('balance')
           .single();
 
-        if (balError) throw balError;
         return res.json({ success: true, inventoryItem: invItem, balance: updatedUser.balance });
-      } else {
-        const userInDb = localDb.users.find(u => u.id === user.id);
-        if (userInDb) userInDb.balance = finalBalance;
-        return res.json({ success: true, inventoryItem: null, balance: finalBalance });
       }
+      return res.json({ success: true, inventoryItem: null, balance: finalBalance });
     }
 
-      // ==================== USER FISHING ROUTES ====================
-      if (path.startsWith('/fishing/')) {
-        // Check fishing access
-        if (path === '/fishing/check-access' && method === 'GET') {
-          if (isSupabaseConfigured && supabase) {
-            try {
-              const { data, error } = await supabase
-                .from('afk_access')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('feature', 'fishing')
-                .eq('is_active', true)
-                .gte('expires_at', new Date().toISOString())
-                .order('expires_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              if (error) throw error;
-              return res.json({ hasAccess: !!data, access: data || null });
-            } catch (error: any) {
-              console.error('[FISHING] Check access error:', error);
-              return res.status(500).json({ error: 'Failed to check access' });
-            }
-          }
-
-          return res.json({ hasAccess: false, access: null });
-        }
-
-        // Get user fishing inventory
-        if (path === '/fishing/inventory' && method === 'GET') {
-          if (isSupabaseConfigured && supabase) {
-            try {
-              const { data, error } = await supabase
-                .from('user_fishing_inventory')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-              if (error) throw error;
-
-              return res.json({
-                inventory: data || {
-                  user_id: user.id,
-                  equipped_rod: null,
-                  fishing_gems: 0,
-                  fishing_saldo: 0,
-                  total_fish_caught: 0,
-                  bait_balance: 0
-                }
-              });
-            } catch (error: any) {
-              console.error('[FISHING] Get inventory error:', error);
-              return res.status(500).json({ error: 'Failed to get inventory' });
-            }
-          }
-
-          return res.json({
-            inventory: {
-              user_id: user.id,
-              equipped_rod: null,
-              fishing_gems: 0,
-              fishing_saldo: 0,
-              total_fish_caught: 0,
-              bait_balance: 0
-            }
-          });
-        }
-
-        // Get user rods
-        if (path === '/fishing/user-rods' && method === 'GET') {
-          if (isSupabaseConfigured && supabaseAdmin) {
-            try {
-              const { data, error } = await supabaseAdmin
-                .from('user_rod_access')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('is_active', true);
-
-              if (error) throw error;
-
-              const rods = [
-                {
-                  rod_id: 'basic_rod',
-                  rod_name: 'Basic Rod',
-                  is_active: true,
-                  granted_at: new Date().toISOString()
-                },
-                ...(data || []).map((r: any) => ({
-                  rod_id: r.rod_id,
-                  rod_name: r.rod_id.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
-                  is_active: r.is_active,
-                  granted_at: r.granted_at
-                }))
-              ];
-
-              return res.json({ rods });
-            } catch (error: any) {
-              console.error('[FISHING] Get user rods error:', error);
-              return res.status(500).json({ error: 'Failed to get user rods' });
-            }
-          }
-
-          return res.json({ rods: [{ rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true }] });
-        }
-
-        // AFK fishing status
-        if (path === '/fishing/afk/status' && method === 'GET') {
-          return res.json({
-            isActive: false,
-            message: 'AFK fishing status is unavailable in this deployment.'
-          });
-        }
-
-        // Fishing logs
-        if (path === '/fishing/logs' && method === 'GET') {
-          if (isSupabaseConfigured && supabase) {
-            try {
-              const { data: fishRecords, error } = await supabase
-                .from('fish_inventory')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('caught_at', { ascending: false })
-                .limit(100);
-
-              if (error) throw error;
-
-              const logs = fishRecords || [];
-              const totalCaught = logs.length;
-              const totalSold = logs.filter((f: any) => f.is_sold).length;
-              const totalUnsold = logs.filter((f: any) => !f.is_sold).length;
-              const totalValue = logs.reduce((sum: number, f: any) => sum + (f.sell_price || 0), 0);
-
-              const fishByType: Record<string, { count: number; totalLb: number; totalValue: number }> = {};
-              logs.forEach((fish: any) => {
-                if (!fishByType[fish.fish_name]) {
-                  fishByType[fish.fish_name] = { count: 0, totalLb: 0, totalValue: 0 };
-                }
-                fishByType[fish.fish_name].count++;
-                fishByType[fish.fish_name].totalLb += fish.lb || 0;
-                fishByType[fish.fish_name].totalValue += fish.sell_price || 0;
-              });
-
-              return res.json({
-                logs,
-                statistics: {
-                  totalCaught,
-                  totalSold,
-                  totalUnsold,
-                  totalValue,
-                  fishByType
-                }
-              });
-            } catch (error: any) {
-              console.error('[FISHING] Get logs error:', error);
-              return res.status(500).json({ error: 'Failed to get fishing logs' });
-            }
-          }
-
-          return res.json({
-            logs: [],
-            statistics: {
-              totalCaught: 0,
-              totalSold: 0,
-              totalUnsold: 0,
-              totalValue: 0,
-              fishByType: {}
-            }
-          });
-        }
-
-        // Claim pending fish
-        if (path === '/fishing/claim-pending' && method === 'POST') {
-          return res.json({ success: true, claimed: [] });
-        }
-
-        // Start AFK fishing
-        if (path === '/fishing/afk/start' && method === 'POST') {
-          return res.json({ success: true, message: 'AFK fishing start is not available in this deployment.' });
-        }
-
-        // Stop AFK fishing
-        if (path === '/fishing/afk/stop' && method === 'POST') {
-          return res.json({ success: true, message: 'AFK fishing stop is not available in this deployment.' });
-        }
+    // ==================== ADMIN ROUTES ====================
+    if (path.startsWith('/admin/')) {
+      if (!user.is_staff) {
+        return res.status(403).json({ error: 'Akses Ditolak!' });
       }
+
+      // Get all users
+      if (path === '/admin/users' && method === 'GET') {
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: list } = await supabaseAdmin
+            .from('users')
+            .select('id, email, username, balance, is_staff, created_at')
+            .order('created_at', { ascending: false });
+
+          return res.json({ users: list || [] });
+        }
+        return res.json({ users: localDb.users.map(({ password, ...u }) => u) });
+      }
+
+      // Update balance
+      if (path.match(/\/admin\/users\/[^/]+\/balance/) && method === 'POST') {
+        const userId = path.split('/')[3];
+        const cleanBalance = parseFloat(body.balance);
+
+        if (isNaN(cleanBalance)) {
+          return res.status(400).json({ error: 'Saldo tidak valid!' });
+        }
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: updated } = await supabaseAdmin
+            .from('users')
+            .update({ balance: cleanBalance })
+            .eq('id', userId)
+            .select('*')
+            .single();
 
           return res.json({ success: true, user: updated });
-        } else {
-          const targetUser = localDb.users.find(u => u.id === userId);
-          if (!targetUser) return res.status(404).json({ error: 'User tidak ditemukan' });
-          targetUser.balance = cleanBalance;
-          return res.json({ success: true, user: targetUser });
         }
+        return res.json({ success: true });
       }
 
-      // Admin fishing routes
-      if (path.startsWith('/admin/fishing/')) {
-        // Grant fishing access
-        if (path === '/admin/fishing/grant-access' && method === 'POST') {
-          const { user_id, duration_days } = body;
+      // ==================== FISHING ADMIN ENDPOINTS ====================
+      
+      // Get fishing access list
+      if (path === '/admin/fishing/access-list' && method === 'GET') {
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data } = await supabaseAdmin
+            .from('fishing_access')
+            .select('*, users(username, email)')
+            .order('created_at', { ascending: false });
 
-          if (!user_id || !duration_days) {
-            return res.status(400).json({ error: 'Missing required fields: user_id and duration_days' });
-          }
+          return res.json({ access_list: data || [] });
+        }
+        return res.json({ access_list: [] });
+      }
 
-          if (isSupabaseConfigured && supabaseAdmin) {
-            try {
-              const expiresAt = new Date();
-              expiresAt.setDate(expiresAt.getDate() + duration_days);
+      // Grant fishing access
+      if (path === '/admin/fishing/grant-access' && method === 'POST') {
+        const { user_id, duration_days } = body;
 
-              const { data: userExists, error: userError } = await supabaseAdmin
-                .from('users')
-                .select('id')
-                .eq('id', user_id)
-                .single();
-
-              if (userError || !userExists) {
-                return res.status(400).json({ error: 'User not found' });
-              }
-
-              const { data, error } = await supabaseAdmin
-                .from('afk_access')
-                .upsert(
-                  {
-                    user_id,
-                    feature: 'fishing',
-                    is_active: true,
-                    expires_at: expiresAt.toISOString(),
-                    granted_by: user.id,
-                    granted_at: new Date().toISOString(),
-                    notes: `${duration_days} days access`
-                  },
-                  { onConflict: 'user_id,feature' }
-                )
-                .select()
-                .single();
-
-              if (error) {
-                console.error('[ADMIN] Grant fishing access error:', error);
-                return res.status(500).json({ error: error.message || 'Failed to grant access' });
-              }
-
-              return res.json({ success: true, access: data });
-            } catch (error: any) {
-              console.error('[ADMIN] Grant fishing access error:', error);
-              return res.status(500).json({ error: error.message || 'Failed to grant access' });
-            }
-          }
-
-          return res.json({ success: true, access: null });
+        if (!user_id || !duration_days) {
+          return res.status(400).json({ error: 'user_id dan duration_days wajib diisi!' });
         }
 
-        // Get fishing access list
-        if (path === '/admin/fishing/access-list' && method === 'GET') {
-          if (isSupabaseConfigured && supabaseAdmin) {
-            try {
-              const { data, error } = await supabaseAdmin
-                .from('afk_access')
-                .select('*')
-                .eq('feature', 'fishing')
-                .order('granted_at', { ascending: false });
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + duration_days);
 
-              if (error) throw error;
-              return res.json({ success: true, access: data || [] });
-            } catch (error: any) {
-              console.error('[ADMIN] Get fishing access list error:', error);
-              return res.status(500).json({ error: 'Failed to get access list' });
-            }
-          }
+          const { data: access } = await supabaseAdmin
+            .from('fishing_access')
+            .upsert({
+              user_id: user_id,
+              granted_by: user.id,
+              expires_at: expiresAt.toISOString(),
+              is_active: true
+            }, {
+              onConflict: 'user_id'
+            })
+            .select('*')
+            .single();
 
-          return res.json({ success: true, access: [] });
+          return res.json({ success: true, access });
+        }
+        return res.json({ success: true });
+      }
+
+      // Get user rod access
+      if (path.match(/\/admin\/fishing\/user-rods\/[^/]+$/) && method === 'GET') {
+        const userId = path.split('/').pop();
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: rods } = await supabaseAdmin
+            .from('user_rods')
+            .select('*')
+            .eq('user_id', userId)
+            .order('granted_at', { ascending: false });
+
+          return res.json({ rods: rods || [] });
+        }
+        return res.json({ rods: [] });
+      }
+
+      // Grant rod access
+      if (path === '/admin/fishing/grant-rod' && method === 'POST') {
+        const { user_id, rod_id, notes } = body;
+
+        if (!user_id || !rod_id) {
+          return res.status(400).json({ error: 'user_id dan rod_id wajib diisi!' });
         }
 
-        // Get fishing rod access for a specific user
-        if (path.startsWith('/admin/fishing/user-rods/') && method === 'GET') {
-          const userId = path.split('/')[4];
-          if (!userId) {
-            return res.status(400).json({ error: 'Missing userId' });
-          }
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: rod } = await supabaseAdmin
+            .from('user_rods')
+            .insert({
+              user_id: user_id,
+              rod_id: rod_id,
+              granted_by: user.id,
+              notes: notes || null
+            })
+            .select('*')
+            .single();
 
-          if (isSupabaseConfigured && supabaseAdmin) {
-            try {
-              const { data, error } = await supabaseAdmin
-                .from('user_rod_access')
-                .select('*')
-                .eq('user_id', userId);
+          return res.json({ success: true, rod });
+        }
+        return res.json({ success: true });
+      }
 
-              if (error) throw error;
-              return res.json({ success: true, rods: data || [] });
-            } catch (error: any) {
-              console.error('[ADMIN] Get user rod access error:', error);
-              return res.status(500).json({ error: 'Failed to get user rod access' });
-            }
-          }
+      // Revoke rod access
+      if (path === '/admin/fishing/revoke-rod' && method === 'POST') {
+        const { user_id, rod_id } = body;
 
-          return res.json({ success: true, rods: [] });
+        if (!user_id || !rod_id) {
+          return res.status(400).json({ error: 'user_id dan rod_id wajib diisi!' });
         }
 
-        // Grant rod access to a user
-        if (path === '/admin/fishing/grant-rod' && method === 'POST') {
-          const { user_id, rod_id, notes } = body;
+        if (isSupabaseConfigured && supabaseAdmin) {
+          await supabaseAdmin
+            .from('user_rods')
+            .delete()
+            .eq('user_id', user_id)
+            .eq('rod_id', rod_id);
 
-          if (!user_id || !rod_id) {
-            return res.status(400).json({ error: 'Missing required fields: user_id and rod_id' });
-          }
-
-          const validRods = ['ez_rod', 'basic_rod', 'lico_rod', 'golden_rod', 'thanksgiving_rod'];
-          if (!validRods.includes(rod_id)) {
-            return res.status(400).json({ error: 'Invalid rod_id. Valid rods: ez_rod, basic_rod, lico_rod, golden_rod, thanksgiving_rod' });
-          }
-
-          if (isSupabaseConfigured && supabaseAdmin) {
-            try {
-              const { data, error } = await supabaseAdmin
-                .from('user_rod_access')
-                .upsert(
-                  {
-                    user_id,
-                    rod_id,
-                    granted_by: user.id,
-                    granted_at: new Date().toISOString(),
-                    is_active: true,
-                    notes
-                  },
-                  { onConflict: 'user_id,rod_id' }
-                )
-                .select()
-                .single();
-
-              if (error) {
-                console.error('[ADMIN] Grant rod access error:', error);
-                return res.status(500).json({ error: error.message || 'Failed to grant rod access' });
-              }
-
-              return res.json({ success: true, rod: data });
-            } catch (error: any) {
-              console.error('[ADMIN] Grant rod access error:', error);
-              return res.status(500).json({ error: error.message || 'Failed to grant rod access' });
-            }
-          }
-
-          return res.json({ success: true, rod: null });
+          return res.json({ success: true, message: 'Rod access revoked' });
         }
+        return res.json({ success: true });
+      }
+
+      // Grant bait
+      if (path === '/admin/fishing/grant-bait' && method === 'POST') {
+        const { user_id, amount, notes } = body;
+
+        if (!user_id || !amount || amount <= 0) {
+          return res.status(400).json({ error: 'user_id dan amount (>0) wajib diisi!' });
+        }
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: inventory } = await supabaseAdmin
+            .from('fishing_inventory')
+            .select('bait')
+            .eq('user_id', user_id)
+            .maybeSingle();
+
+          const currentBait = inventory?.bait || 0;
+          const newBait = currentBait + amount;
+
+          const { data: updated } = await supabaseAdmin
+            .from('fishing_inventory')
+            .upsert({
+              user_id: user_id,
+              bait: newBait
+            }, {
+              onConflict: 'user_id'
+            })
+            .select('*')
+            .single();
+
+          return res.json({ success: true, inventory: updated });
+        }
+        return res.json({ success: true });
+      }
+
+      // Get user fishing inventory
+      if (path.match(/\/admin\/fishing\/user-inventory\/[^/]+$/) && method === 'GET') {
+        const userId = path.split('/').pop();
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          const { data: inventory } = await supabaseAdmin
+            .from('fishing_inventory')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          return res.json({ inventory: inventory || { bait: 0, fishing_saldo: 0 } });
+        }
+        return res.json({ inventory: { bait: 0, fishing_saldo: 0 } });
       }
     }
 
@@ -892,45 +527,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const gameType = path.split('/').pop();
       
       if (isSupabaseConfigured && supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('game_configs')
-            .select('config_data')
-            .eq('game_type', gameType);
+        const { data } = await supabase
+          .from('game_configs')
+          .select('config_data')
+          .eq('game_type', gameType);
 
-          if (!error && data && data.length > 0) {
-            const config = data[0].config_data;
-            if (config.cases && !config.chests) {
-              config.chests = config.cases;
-              delete config.cases;
-            }
-            return res.json(config);
-          }
-        } catch (e: any) {
-          console.log(`[CONFIG] Error for ${gameType}:`, e.message);
+        if (data && data.length > 0) {
+          return res.json(data[0].config_data);
         }
       }
 
-      // Return minimal fallback configs
       if (gameType === 'cases') {
         return res.json({ chests: [], gameSettings: {} });
       }
-      if (gameType === 'crash') {
-        return res.json({ crashSettings: {}, prizes: [], leaderboard: [] });
-      }
-      return res.status(404).json({ error: 'Config type unknown' });
+      return res.status(404).json({ error: 'Config not found' });
     }
 
     // Online users
     if (path === '/users/online' && method === 'GET') {
       if (isSupabaseConfigured && supabase) {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('users')
           .select('username, is_staff')
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (!error && data) {
+        if (data) {
           return res.json({ users: data.map((u: any) => ({ username: u.username, isStaff: u.is_staff })) });
         }
       }
@@ -950,18 +572,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error: any) {
-    console.error('[API ERROR]', {
-      path: path,
-      method: method,
-      message: error?.message,
-      stack: error?.stack,
-      error: error
-    });
+    console.error('[API ERROR]', error);
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error?.message || 'Unknown error',
-      path: path,
-      method: method
+      message: error.message
     });
   }
 }
