@@ -97,8 +97,10 @@ export const API = {
       method: 'POST',
       body: JSON.stringify(params)
     });
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token);
+    // Backend returns 'access_token', store as 'auth_token'
+    const token = data.access_token || data.token;
+    if (token) {
+      localStorage.setItem('auth_token', token);
       if (data.refresh_token) {
         localStorage.setItem('refresh_token', data.refresh_token);
       }
@@ -111,8 +113,10 @@ export const API = {
       method: 'POST',
       body: JSON.stringify(params)
     });
-    if (data.token) {
-      localStorage.setItem('auth_token', data.token);
+    // Backend returns 'access_token', store as 'auth_token'
+    const token = data.access_token || data.token;
+    if (token) {
+      localStorage.setItem('auth_token', token);
       if (data.refresh_token) {
         localStorage.setItem('refresh_token', data.refresh_token);
       }
