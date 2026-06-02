@@ -715,32 +715,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (path === '/admin/fishing/grant-bait' && method === 'POST') {
         const { user_id, amount, notes } = body;
 
+        console.log('[GRANT BAIT] Request:', { user_id, amount, notes });
+
         if (!user_id || !amount || amount <= 0) {
           return res.status(400).json({ error: 'user_id dan amount (>0) wajib diisi!' });
         }
 
         if (isSupabaseConfigured && supabaseAdmin) {
-          const { data: inventory } = await supabaseAdmin
-            .from('fishing_inventory')
-            .select('bait')
-            .eq('user_id', user_id)
-            .maybeSingle();
+          try {
+            // Check if user exists
+            const { data: userCheck } = await supabaseAdmin
+              .from('users')
+              .select('id, username')
+              .eq('id', user_id)
+              .maybeSingle();
 
-          const currentBait = inventory?.bait || 0;
-          const newBait = currentBait + amount;
+            if (!userCheck) {
+              console.log('[GRANT BAIT] User not found:', user_id);
+              return res.status(400).json({ error: 'User tidak ditemukan!' });
+            }
 
-          const { data: updated } = await supabaseAdmin
-            .from('fishing_inventory')
-            .upsert({
-              user_id: user_id,
-              bait: newBait
-            }, {
-              onConflict: 'user_id'
-            })
-            .select('*')
-            .single();
+            console.log('[GRANT BAIT] User found:', userCheck.username);
 
-          return res.json({ success: true, inventory: updated });
+            // Get current bait
+            const { data: inventory } = await supabaseAdmin
+              .from('fishing_inventory')
+              .select('bait')
+              .eq('user_id', user_id)
+              .maybeSingle();
+
+            const currentBait = inventory?.bait || 0;
+            const newBait = currentBait + amount;
+
+            console.log('[GRANT BAIT] Bait:', { current: currentBait, adding: amount, new: newBait });
+
+            // Upsert inventory
+            const { data: updated, error: upsertError } = await supabaseAdmin
+              .from('fishing_inventory')
+              .upsert({
+                user_id: user_id,
+                bait: newBait,
+                fishing_saldo: inventory?.fishing_saldo || 0,
+                updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'user_id'
+              })
+              .select('*')
+              .single();
+
+            if (upsertError) {
+              console.error('[GRANT BAIT] Upsert error:', upsertError);
+              return res.status(500).json({ error: 'Gagal update bait: ' + upsertError.message });
+            }
+
+            console.log('[GRANT BAIT] Success:', updated);
+
+            return res.json({ 
+              success: true, 
+              inventory: {
+                ...updated,
+                bait_balance: updated.bait // For frontend compatibility
+              }
+            });
+          } catch (e: any) {
+            console.error('[GRANT BAIT] Exception:', e);
+            return res.status(500).json({ error: 'Server error: ' + e.message });
+          }
         }
         return res.json({ success: true });
       }
@@ -756,9 +796,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .eq('user_id', userId)
             .maybeSingle();
 
-          return res.json({ inventory: inventory || { bait: 0, fishing_saldo: 0 } });
+          // Return with both bait and bait_balance for compatibility
+          const result = inventory || { user_id: userId, bait: 0, fishing_saldo: 0 };
+          return res.json({ 
+            inventory: {
+              ...result,
+              bait_balance: result.bait // Frontend expects bait_balance
+            }
+          });
         }
-        return res.json({ inventory: { bait: 0, fishing_saldo: 0 } });
+        return res.json({ inventory: { user_id: userId, bait: 0, bait_balance: 0, fishing_saldo: 0 } });
       }
     }
 
