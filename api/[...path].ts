@@ -342,18 +342,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Get user fishing inventory
       if (path === '/fishing/inventory' && method === 'GET') {
+        console.log('[USER FISHING INVENTORY] Request from user:', user.id);
+        
         if (isSupabaseConfigured && supabase) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('fishing_inventory')
             .select('*')
             .eq('user_id', user.id)
             .maybeSingle();
 
+          if (error) {
+            console.error('[USER FISHING INVENTORY] Database error:', error);
+          }
+
+          const inventoryData = data || { user_id: user.id, bait: 0, fishing_saldo: 0 };
+          
+          console.log('[USER FISHING INVENTORY] Raw data from DB:', data);
+          console.log('[USER FISHING INVENTORY] Sending response with bait_balance:', inventoryData.bait);
+          
           return res.json({
-            inventory: data || { user_id: user.id, bait: 0, fishing_saldo: 0 }
+            inventory: {
+              ...inventoryData,
+              bait_balance: inventoryData.bait // Frontend compatibility
+            }
           });
         }
-        return res.json({ inventory: { user_id: user.id, bait: 0, fishing_saldo: 0 } });
+        
+        console.log('[USER FISHING INVENTORY] Supabase not configured, returning default');
+        const defaultData = { user_id: user.id, bait: 0, fishing_saldo: 0 };
+        return res.json({ 
+          inventory: {
+            ...defaultData,
+            bait_balance: 0
+          }
+        });
       }
 
       // Get user rods
@@ -432,6 +454,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (path === '/fishing/afk/start' && method === 'POST') {
         const { rod_id } = body;
 
+        console.log('[AFK START] Request from user:', user.id, 'with rod:', rod_id);
+
         if (isSupabaseConfigured && supabaseAdmin) {
           try {
             // Check if already has active session
@@ -443,6 +467,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .maybeSingle();
 
             if (existing) {
+              console.log('[AFK START] User already has active session:', existing.id);
               return res.json({ 
                 success: true, 
                 message: 'AFK fishing already running',
@@ -451,15 +476,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // Check bait
-            const { data: inventory } = await supabaseAdmin
+            const { data: inventory, error: invError } = await supabaseAdmin
               .from('fishing_inventory')
               .select('bait')
               .eq('user_id', user.id)
               .maybeSingle();
 
+            console.log('[AFK START] Inventory check:', { inventory, error: invError });
+
             if (!inventory || inventory.bait <= 0) {
+              console.log('[AFK START] No bait available. Bait:', inventory?.bait || 0);
               return res.status(400).json({ error: 'Tidak ada bait! Hubungi admin untuk mendapat bait.' });
             }
+
+            console.log('[AFK START] Bait available:', inventory.bait);
 
             // Create AFK session
             const { data: session } = await supabaseAdmin
@@ -475,6 +505,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .select('*')
               .single();
 
+            console.log('[AFK START] Session created:', session?.id);
+
             return res.json({ 
               success: true, 
               message: 'AFK fishing started! Browser bisa ditutup.',
@@ -485,6 +517,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(500).json({ error: 'Gagal start AFK: ' + e.message });
           }
         }
+        console.log('[AFK START] Database not configured');
         return res.status(500).json({ error: 'Database not configured' });
       }
 
