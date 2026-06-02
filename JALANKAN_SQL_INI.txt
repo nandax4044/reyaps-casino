@@ -1,0 +1,108 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   🚨 ERROR: Table 'fishing_access' Tidak Ditemukan           ║
+║                                                               ║
+║   ✅ SOLUSI: Jalankan SQL Script di Supabase                  ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────┐
+│ LANGKAH 1: Buka Supabase                                      │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Buka browser
+  2. Go to: https://supabase.com/dashboard
+  3. Login
+  4. Pilih project: rwngqiakigebtwxohiri
+  5. Klik menu: SQL Editor (di sidebar kiri)
+
+┌───────────────────────────────────────────────────────────────┐
+│ LANGKAH 2: Copy SQL Script                                    │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Buka file: FIX_FISHING_ACCESS_TABLE.sql
+  2. Copy SEMUA isi file (Ctrl+A, Ctrl+C)
+
+┌───────────────────────────────────────────────────────────────┐
+│ LANGKAH 3: Jalankan di Supabase                               │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Di Supabase SQL Editor, klik: + New Query
+  2. Paste SQL script (Ctrl+V)
+  3. Klik tombol: RUN (atau Ctrl+Enter)
+  4. Tunggu sampai selesai (~10 detik)
+
+┌───────────────────────────────────────────────────────────────┐
+│ LANGKAH 4: Verify Success                                     │
+└───────────────────────────────────────────────────────────────┘
+
+  Jika berhasil, akan muncul di output:
+
+  ═══════════════════════════════════════════════════════════
+  🎣 FISHING TABLES VERIFICATION
+  ═══════════════════════════════════════════════════════════
+
+  ✅ fishing_access table exists
+  ✅ user_rods table exists
+  ✅ fishing_inventory table exists
+  ✅ fish_inventory table exists
+
+  ═══════════════════════════════════════════════════════════
+  🎉 SUCCESS! ALL FISHING TABLES READY!
+  ═══════════════════════════════════════════════════════════
+
+┌───────────────────────────────────────────────────────────────┐
+│ LANGKAH 5: Test di Admin Panel                                │
+└───────────────────────────────────────────────────────────────┘
+
+  1. Login sebagai admin
+  2. Admin Panel → Fishing Management
+  3. Tab: Access Management
+  4. Klik: Beri Akses Baru
+  5. Pilih user
+  6. Duration: 7 days
+  7. Klik: Grant
+
+  ✅ Expected: "Akses fishing berhasil diberikan!"
+  ✅ Access list langsung update
+  ❌ No more "table not found" error!
+
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   📁 FILES:                                                   ║
+║                                                               ║
+║   1. FIX_FISHING_ACCESS_TABLE.sql     ← JALANKAN INI         ║
+║   2. CARA_FIX_FISHING_ACCESS_ERROR.md ← Detailed guide       ║
+║   3. JALANKAN_SQL_INI.txt             ← This file            ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+╔═══════════════════════════════════════════════════════════════╗
+║   🎯 QUICK SUMMARY:                                           ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Problem:
+  Table 'fishing_access' tidak ada di database Supabase
+
+Solution:
+  Jalankan FIX_FISHING_ACCESS_TABLE.sql di Supabase SQL Editor
+
+Result:
+  4 tables dibuat:
+    - fishing_access
+    - user_rods
+    - fishing_inventory
+    - fish_inventory
+
+Time:
+  ~2 menit (SQL execution + verification)
+
+Status:
+  ⏳ WAITING - Jalankan SQL script sekarang!
+
+╔═══════════════════════════════════════════════════════════════╗
+║   ⚡ START NOW:                                               ║
+║                                                               ║
+║   https://supabase.com/dashboard                              ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
