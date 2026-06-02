@@ -108,7 +108,7 @@
           "name": "Legendary Rayman",
           "rarity": "Mythic",
           "chance": 1,
-          "value": 1000000000000000000000,
+          "value": 1e21,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/lray2.png"
@@ -270,7 +270,7 @@
           "name": "Tricky",
           "rarity": "Rare",
           "chance": 4,
-          "value": 520000000000000000000000000000000000,
+          "value": 5.2e35,
           "icon": "",
           "color": "#eab308",
           "image": "/images/tricky2.png"
@@ -279,7 +279,7 @@
           "name": "Kaido",
           "rarity": "Rare",
           "chance": 1,
-          "value": 280000000000000000000000000,
+          "value": 2.8e26,
           "icon": "",
           "color": "#ef4444",
           "image": "/images/kaidohd.png"
@@ -327,7 +327,7 @@
           "name": "Davinci",
           "rarity": "Rare",
           "chance": 2,
-          "value": 300000000000000000000,
+          "value": 3e20,
           "icon": "",
           "color": "#eab308",
           "image": "/images/davinci.png"
