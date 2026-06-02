@@ -100,7 +100,7 @@ async function authenticateToken(token: string): Promise<any | null> {
 
 // Main handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS
+  // CORS headers first
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -110,247 +110,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  // Parse path from Vercel catch-all
-  const pathSegments = req.query.path;
-  const path = Array.isArray(pathSegments) ? `/${pathSegments.join('/')}` : `/${pathSegments || ''}`;
-  const method = req.method || 'GET';
-  
-  // Parse body - handle both JSON object and string
-  let body = {};
-  if (req.body) {
-    if (typeof req.body === 'string') {
-      try {
-        body = JSON.parse(req.body);
-      } catch (e) {
-        console.log('[API] Failed to parse body as JSON, using as-is');
-        body = {};
-      }
-    } else {
-      body = req.body;
-    }
-  }
-
-  console.log(`[API] ${method} ${path}`);
-
+  // Wrap EVERYTHING in try-catch to prevent crashes
   try {
+    // Parse request
+    const pathSegments = req.query.path;
+    const path = Array.isArray(pathSegments) ? `/${pathSegments.join('/')}` : `/${pathSegments || ''}`;
+    const method = req.method || 'GET';
+    
+    // Safe body parsing
+    let body: any = {};
+    if (req.body) {
+      if (typeof req.body === 'string') {
+        try {
+          body = JSON.parse(req.body);
+        } catch (e) {
+          body = {};
+        }
+      } else {
+        body = req.body;
+      }
+    }
+
+    console.log(`[API] ${method} ${path}`);
+
     // ==================== DEBUG ENDPOINT ====================
     if (path === '/debug/info' && method === 'GET') {
       return res.json({
         timestamp: new Date().toISOString(),
         supabaseConfigured: isSupabaseConfigured,
-        supabaseUrl: supabaseUrl ? 'configured' : 'missing',
-        supabaseKey: supabaseKey ? 'configured' : 'missing',
-        nodeEnv: process.env.NODE_ENV
+        nodeEnv: process.env.NODE_ENV,
+        status: 'OK'
       });
     }
 
-    // ==================== AUTH ROUTES (PUBLIC) ====================
-    
-    if (path === '/auth/register' && method === 'POST') {
-      try {
-        console.log('[REGISTER] Request received');
-        
-        const email = body?.email;
-        const username = body?.username;
-        const password = body?.password;
-
-        if (!email || !username || !password) {
-          console.log('[REGISTER] Missing fields');
-          return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
-        }
-
-        const slugEmail = String(email).trim().toLowerCase();
-        const slugUsername = String(username).trim().toLowerCase();
-
-        // Check local first
-        console.log('[REGISTER] Checking local duplicates...');
-        const localDuplicate = localDb.users.find(u => 
-          u.email.toLowerCase() === slugEmail || u.username.toLowerCase() === slugUsername
-        );
-
-        if (localDuplicate) {
-          console.log('[REGISTER] Local duplicate found');
-          return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
-        }
-
-        // Check Supabase if configured
-        if (isSupabaseConfigured && supabase) {
-          console.log('[REGISTER] Checking Supabase for duplicate username...');
-          
-          const { data: existingUsername, error: checkError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('username', slugUsername)
-            .maybeSingle()
-            .catch((e: any) => ({ data: null, error: e }));
-
-          if (existingUsername) {
-            console.log('[REGISTER] Username already exists in Supabase');
-            return res.status(400).json({ error: 'Username sudah digunakan!' });
-          }
-
-          console.log('[REGISTER] Calling supabase.auth.signUp...');
-          
-          const { data: authData, error: authError } = await supabase
-            .auth.signUp({
-              email: slugEmail,
-              password: String(password),
-              options: { data: { username: slugUsername } }
-            })
-            .catch((e: any) => ({ data: null, error: e }));
-
-          if (authError || !authData?.user) {
-            console.log('[REGISTER] SignUp failed:', authError?.message);
-            if (authError?.message?.includes('already registered')) {
-              return res.status(400).json({ error: 'Email sudah terdaftar!' });
-            }
-            return res.status(400).json({ error: authError?.message || 'Registration failed' });
-          }
-
-          const authUserId = authData.user.id;
-          const sessionToken = authData.session?.access_token || null;
-
-          console.log('[REGISTER] User created, waiting for trigger...');
-          
-          // Wait for handle_new_user trigger
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // Check if trigger created profile
-          const { data: triggerUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', authUserId)
-            .maybeSingle()
-            .catch((e: any) => ({ data: null, error: e }));
-
-          if (triggerUser) {
-            console.log('[REGISTER] ✅ Profile created by trigger');
-            const { password: _, ...safeUser } = triggerUser as any;
-            
-            // Get session token
-            let token = sessionToken || authUserId;
-            if (!sessionToken && !token) {
-              const signInResult = await supabase
-                .auth.signInWithPassword({ email: slugEmail, password: String(password) })
-                .catch((e: any) => ({ data: null, error: e }));
-              token = signInResult?.data?.session?.access_token || authUserId;
-            }
-            
-            return res.status(200).json({
-              success: true,
-              user: safeUser,
-              access_token: token,
-              token: token,
-              refresh_token: authData.session?.refresh_token
-            });
-          }
-
-          console.log('[REGISTER] Trigger did not create profile, inserting manually...');
-
-          // Manually insert profile
-          const insertClient = sessionToken
-            ? createClient(supabaseUrl, supabaseKey, {
-                global: { headers: { Authorization: `Bearer ${sessionToken}` } },
-                auth: { autoRefreshToken: false, persistSession: false }
-              })
-            : supabase;
-
-          const { data: manualUser, error: insertError } = await insertClient
-            .from('users')
-            .insert({
-              id: authUserId,
-              email: slugEmail,
-              username: slugUsername,
-              balance: 0.00,
-              is_staff: false
-            })
-            .select('*')
-            .single()
-            .catch((e: any) => ({ data: null, error: e }));
-
-          if (insertError || !manualUser) {
-            console.log('[REGISTER] Manual insert failed:', insertError?.message);
-            return res.status(400).json({ error: 'Profil gagal disimpan: ' + (insertError?.message || 'Unknown error') });
-          }
-
-          console.log('[REGISTER] ✅ Profile created manually');
-          const { password: _, ...safeUser } = manualUser as any;
-          
-          let token = sessionToken || authUserId;
-          if (!sessionToken && !token) {
-            const signInResult = await supabase
-              .auth.signInWithPassword({ email: slugEmail, password: String(password) })
-              .catch((e: any) => ({ data: null, error: e }));
-            token = signInResult?.data?.session?.access_token || authUserId;
-          }
-          
-          return res.status(200).json({
-            success: true,
-            user: safeUser,
-            access_token: token,
-            token: token,
-            refresh_token: authData.session?.refresh_token
-          });
-
-        } else {
-          // Local registration fallback
-          console.log('[REGISTER] Using local registration');
-          
-          const newUser = {
-            id: crypto.randomUUID(),
-            email: slugEmail,
-            username: slugUsername,
-            password: hashPassword(String(password)),
-            balance: 0.00,
-            is_staff: slugUsername === 'admin',
-            created_at: new Date().toISOString()
-          };
-
-          localDb.users.push(newUser);
-          console.log('[REGISTER] ✅ Local user created');
-          
-          const { password: _, ...safeUser } = newUser;
-          return res.status(200).json({
-            success: true,
-            user: safeUser,
-            access_token: newUser.id,
-            token: newUser.id
-          });
-        }
-
-      } catch (err: any) {
-        console.error('[REGISTER] Exception caught:', err?.message || String(err));
-        return res.status(500).json({
-          error: 'Registration error',
-          details: err?.message || 'Unknown error'
-        });
-      }
-    }
-
+    // ==================== AUTH: LOGIN ====================
     if (path === '/auth/login' && method === 'POST') {
+      const loginKey = body?.loginKey || '';
+      const password = body?.password || '';
+
+      if (!loginKey || !password) {
+        return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
+      }
+
+      const slugKey = String(loginKey).trim().toLowerCase();
+      const slugPassword = String(password).trim();
+
+      // Try local first
       try {
-        console.log('[LOGIN] Request received');
-        
-        const loginKey = body?.loginKey;
-        const password = body?.password;
-
-        if (!loginKey || !password) {
-          console.log('[LOGIN] Missing credentials');
-          return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
-        }
-
-        const slugKey = String(loginKey).trim().toLowerCase();
-
-        // Try local first (faster, always works)
-        console.log('[LOGIN] Checking local auth...');
         const localUser = localDb.users.find(u => 
           (u.email && u.email.toLowerCase() === slugKey) || 
           (u.username && u.username.toLowerCase() === slugKey)
         );
 
-        if (localUser && localUser.password === hashPassword(String(password))) {
-          console.log('[LOGIN] ✅ Local auth success');
+        if (localUser && localUser.password === hashPassword(slugPassword)) {
           const { password: _, ...safeUser } = localUser;
+          console.log('[LOGIN] ✅ Local auth success');
           return res.status(200).json({
             success: true,
             user: safeUser,
@@ -358,121 +172,212 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             token: localUser.id
           });
         }
+      } catch (localErr: any) {
+        console.log('[LOGIN] Local auth check error:', localErr?.message);
+      }
 
-        // Try Supabase if configured
-        if (!isSupabaseConfigured || !supabase) {
-          console.log('[LOGIN] No local match and Supabase not configured');
-          return res.status(401).json({ error: 'Akun tidak ditemukan!' });
-        }
+      // Try Supabase if configured
+      if (isSupabaseConfigured && supabase) {
+        try {
+          let loginEmail = slugKey;
 
-        console.log('[LOGIN] Attempting Supabase auth...');
-        
-        let loginEmail = slugKey;
-        
-        // If not email format, look up username
-        if (!slugKey.includes('@')) {
-          console.log('[LOGIN] Looking up username in Supabase...');
-          const { data: foundUser, error: lookupError } = await supabase
-            .from('users')
-            .select('email')
-            .eq('username', slugKey)
-            .maybeSingle()
-            .catch((e: any) => ({ data: null, error: e }));
+          // Look up by username if not email format
+          if (!slugKey.includes('@')) {
+            try {
+              const { data: foundUser } = await supabase
+                .from('users')
+                .select('email')
+                .eq('username', slugKey)
+                .maybeSingle();
 
-          if (lookupError) {
-            console.log('[LOGIN] Username lookup failed:', lookupError?.message);
+              if (foundUser) {
+                loginEmail = foundUser.email;
+              }
+            } catch (e: any) {
+              console.log('[LOGIN] Username lookup error:', e?.message);
+            }
           }
 
-          if (!foundUser) {
-            console.log('[LOGIN] Username not found in Supabase');
-            return res.status(401).json({ error: 'Akun tidak ditemukan!' });
+          // Sign in
+          const { data: sessionData } = await supabase.auth.signInWithPassword({
+            email: loginEmail,
+            password: slugPassword
+          });
+
+          if (sessionData?.session) {
+            // Get user profile
+            const { data: user } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', sessionData.user.id)
+              .single();
+
+            if (user) {
+              const { password: _, ...safeUser } = user as any;
+              console.log('[LOGIN] ✅ Supabase auth success');
+              return res.status(200).json({
+                success: true,
+                user: safeUser,
+                access_token: sessionData.session.access_token,
+                token: sessionData.session.access_token,
+                refresh_token: sessionData.session.refresh_token
+              });
+            }
           }
 
-          loginEmail = foundUser.email;
-          console.log('[LOGIN] Found email for username');
-        }
+          console.log('[LOGIN] Supabase auth failed');
+          return res.status(401).json({ error: 'Email/Username atau Password salah!' });
 
-        // Attempt Supabase sign in
-        const { data: sessionData, error: signInError } = await supabase
-          .auth.signInWithPassword({ email: loginEmail, password: String(password) })
-          .catch((e: any) => ({ data: null, error: e }));
-
-        if (signInError || !sessionData?.session) {
-          console.log('[LOGIN] Supabase sign-in failed');
+        } catch (sbErr: any) {
+          console.log('[LOGIN] Supabase error:', sbErr?.message);
           return res.status(401).json({ error: 'Email/Username atau Password salah!' });
         }
+      }
 
-        // Fetch user profile
-        const { data: user, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', sessionData.user.id)
-          .single()
-          .catch((e: any) => ({ data: null, error: e }));
+      // No auth worked
+      return res.status(401).json({ error: 'Akun tidak ditemukan!' });
+    }
 
-        if (userError || !user) {
-          console.log('[LOGIN] User profile fetch failed');
-          return res.status(401).json({ error: 'Profil user tidak ditemukan!' });
+    // ==================== AUTH: REGISTER ====================
+    if (path === '/auth/register' && method === 'POST') {
+      const email = String(body?.email || '').trim().toLowerCase();
+      const username = String(body?.username || '').trim().toLowerCase();
+      const password = String(body?.password || '').trim();
+
+      if (!email || !username || !password) {
+        return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
+      }
+
+      // Check local duplicates
+      try {
+        const localDuplicate = localDb.users.find(u =>
+          u.email.toLowerCase() === email || u.username.toLowerCase() === username
+        );
+        if (localDuplicate) {
+          return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
         }
+      } catch (e: any) {
+        console.log('[REGISTER] Local duplicate check error:', e?.message);
+      }
 
-        console.log('[LOGIN] ✅ Supabase auth success');
-        const { password: _, ...safeUser } = user as any;
+      // Try Supabase if configured
+      if (isSupabaseConfigured && supabase) {
+        try {
+          // Sign up
+          const { data: authData } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { username: username } }
+          });
+
+          if (authData?.user) {
+            const userId = authData.user.id;
+
+            // Wait for trigger
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Check if profile was created
+            const { data: user } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single();
+
+            if (user) {
+              const { password: _, ...safeUser } = user as any;
+              console.log('[REGISTER] ✅ Supabase registration success');
+              const token = authData.session?.access_token || userId;
+              return res.status(200).json({
+                success: true,
+                user: safeUser,
+                access_token: token,
+                token: token
+              });
+            } else {
+              // Try manual insert
+              try {
+                const { data: manualUser } = await supabase
+                  .from('users')
+                  .insert({
+                    id: userId,
+                    email: email,
+                    username: username,
+                    balance: 0,
+                    is_staff: false
+                  })
+                  .select('*')
+                  .single();
+
+                if (manualUser) {
+                  const { password: _, ...safeUser } = manualUser as any;
+                  console.log('[REGISTER] ✅ Manual profile creation success');
+                  const token = authData.session?.access_token || userId;
+                  return res.status(200).json({
+                    success: true,
+                    user: safeUser,
+                    access_token: token,
+                    token: token
+                  });
+                }
+              } catch (insertErr: any) {
+                console.log('[REGISTER] Manual insert error:', insertErr?.message);
+              }
+            }
+          }
+
+          return res.status(400).json({ error: 'Registration failed' });
+
+        } catch (sbRegErr: any) {
+          console.log('[REGISTER] Supabase error:', sbRegErr?.message);
+          
+          if (sbRegErr?.message?.includes('already registered')) {
+            return res.status(400).json({ error: 'Email sudah terdaftar!' });
+          }
+          return res.status(400).json({ error: 'Registration failed: ' + (sbRegErr?.message || 'Unknown error') });
+        }
+      }
+
+      // Local registration fallback
+      try {
+        const newUser = {
+          id: crypto.randomUUID(),
+          email: email,
+          username: username,
+          password: hashPassword(password),
+          balance: 0,
+          is_staff: username === 'admin',
+          created_at: new Date().toISOString()
+        };
+
+        localDb.users.push(newUser);
+        const { password: _, ...safeUser } = newUser;
+        console.log('[REGISTER] ✅ Local registration success');
         return res.status(200).json({
           success: true,
           user: safeUser,
-          access_token: sessionData.session.access_token,
-          token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token
+          access_token: newUser.id,
+          token: newUser.id
         });
-
-      } catch (err: any) {
-        console.error('[LOGIN] Exception caught:', err?.message || String(err));
-        return res.status(500).json({
-          error: 'Login service error',
-          details: err?.message || 'Unknown error'
-        });
+      } catch (localRegErr: any) {
+        console.log('[REGISTER] Local registration error:', localRegErr?.message);
+        return res.status(500).json({ error: 'Registration failed' });
       }
     }
 
-    if (path === '/auth/refresh' && method === 'POST') {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'No token provided' });
-      }
+    // ==================== 404 ====================
+    return res.status(404).json({ 
+      error: 'Endpoint not found',
+      path: path
+    });
 
-      const oldToken = authHeader.split(' ')[1];
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data, error } = await supabase.auth.refreshSession({
-            refresh_token: oldToken
-          });
-
-          if (error || !data?.session) {
-            return res.status(401).json({ 
-              error: 'Token sudah kadaluarsa. Silakan login ulang.',
-              needsLogin: true 
-            });
-          }
-
-          return res.json({
-            success: true,
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
-          });
-        } catch (e: any) {
-          return res.status(500).json({ error: 'Refresh failed: ' + e.message });
-        }
-      } else {
-        return res.json({ success: true, access_token: oldToken });
-      }
-    }
-
-    // ==================== PROTECTED ROUTES (REQUIRE AUTH) ====================
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.log('[AUTH] Missing or invalid auth header');
+  } catch (outerErr: any) {
+    console.error('[CRITICAL ERROR]', outerErr?.message || String(outerErr));
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: outerErr?.message || 'Unknown error'
+    });
+  }
+}
       return res.status(401).json({ error: 'Sesi tidak valid atau telah berakhir. Silakan login kembali.' });
     }
 
