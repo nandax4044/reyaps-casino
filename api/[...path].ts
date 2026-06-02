@@ -545,10 +545,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             console.log('[AFK START] Check user_fishing_inventory:', { data: newInv, error: newErr });
 
-            if (newInv) {
+            if (newInv && newInv.bait_balance > 0) {
               inventory = { bait_balance: newInv.bait_balance, equipped_rod: newInv.equipped_rod };
-            } else if (newErr && newErr.code === 'PGRST116') {
-              // Table doesn't exist or no data, try old table
+              console.log('[AFK START] Found bait in user_fishing_inventory:', newInv.bait_balance);
+            } else {
+              // ALWAYS try old table as fallback
               console.log('[AFK START] Trying fallback to fishing_inventory...');
               const { data: oldInv, error: oldErr } = await supabaseAdmin
                 .from('fishing_inventory')
@@ -558,22 +559,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               
               console.log('[AFK START] Check fishing_inventory:', { data: oldInv, error: oldErr });
               
-              if (oldInv) {
+              if (oldInv && oldInv.bait > 0) {
                 inventory = { bait_balance: oldInv.bait, equipped_rod: null };
+                console.log('[AFK START] Found bait in fishing_inventory:', oldInv.bait);
               }
-              invError = oldErr;
-            } else {
-              invError = newErr;
+              invError = oldErr || newErr;
             }
 
-            console.log('[AFK START] Final inventory check:', { inventory, error: invError });
+            console.log('[AFK START] Final inventory check:', { 
+              has_inventory: !!inventory,
+              bait_balance: inventory?.bait_balance || 0,
+              error: invError
+            });
 
-            if (!inventory || inventory.bait_balance <= 0) {
-              console.log('[AFK START] No bait available. Bait:', inventory?.bait_balance || 0);
+            if (!inventory || !inventory.bait_balance || inventory.bait_balance <= 0) {
+              console.error('[AFK START] NO BAIT FOUND:', {
+                user_id: user.id,
+                username: user.username,
+                inventory,
+                error: invError
+              });
               return res.status(400).json({ error: 'Tidak ada bait! Hubungi admin untuk mendapat bait.' });
             }
 
-            console.log('[AFK START] Bait available:', inventory.bait_balance);
+            console.log('[AFK START] SUCCESS - Bait available:', inventory.bait_balance);
 
             // Use equipped rod from inventory, or rod_id from request, or default
             const finalRod = inventory.equipped_rod || rod_id || 'basic_rod';
