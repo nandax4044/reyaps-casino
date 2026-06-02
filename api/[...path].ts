@@ -484,6 +484,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.json({ success: true, user: targetUser });
         }
       }
+
+      // Admin fishing routes
+      if (path.startsWith('/admin/fishing/')) {
+        // Grant fishing access
+        if (path === '/admin/fishing/grant-access' && method === 'POST') {
+          const { user_id, duration_days } = body;
+
+          if (!user_id || !duration_days) {
+            return res.status(400).json({ error: 'Missing required fields: user_id and duration_days' });
+          }
+
+          if (isSupabaseConfigured && supabaseAdmin) {
+            try {
+              const expiresAt = new Date();
+              expiresAt.setDate(expiresAt.getDate() + duration_days);
+
+              const { data: userExists, error: userError } = await supabaseAdmin
+                .from('users')
+                .select('id')
+                .eq('id', user_id)
+                .single();
+
+              if (userError || !userExists) {
+                return res.status(400).json({ error: 'User not found' });
+              }
+
+              const { data, error } = await supabaseAdmin
+                .from('afk_access')
+                .upsert(
+                  {
+                    user_id,
+                    feature: 'fishing',
+                    is_active: true,
+                    expires_at: expiresAt.toISOString(),
+                    granted_by: user.id,
+                    granted_at: new Date().toISOString(),
+                    notes: `${duration_days} days access`
+                  },
+                  { onConflict: 'user_id,feature' }
+                )
+                .select()
+                .single();
+
+              if (error) {
+                console.error('[ADMIN] Grant fishing access error:', error);
+                return res.status(500).json({ error: error.message || 'Failed to grant access' });
+              }
+
+              return res.json({ success: true, access: data });
+            } catch (error: any) {
+              console.error('[ADMIN] Grant fishing access error:', error);
+              return res.status(500).json({ error: error.message || 'Failed to grant access' });
+            }
+          }
+
+          return res.json({ success: true, access: null });
+        }
+
+        // Get fishing access list
+        if (path === '/admin/fishing/access-list' && method === 'GET') {
+          if (isSupabaseConfigured && supabaseAdmin) {
+            try {
+              const { data, error } = await supabaseAdmin
+                .from('afk_access')
+                .select('*')
+                .eq('feature', 'fishing')
+                .order('granted_at', { ascending: false });
+
+              if (error) throw error;
+              return res.json({ success: true, access: data || [] });
+            } catch (error: any) {
+              console.error('[ADMIN] Get fishing access list error:', error);
+              return res.status(500).json({ error: 'Failed to get access list' });
+            }
+          }
+
+          return res.json({ success: true, access: [] });
+        }
+      }
     }
 
     // ==================== PUBLIC ROUTES ====================

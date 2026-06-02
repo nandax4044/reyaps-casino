@@ -1586,7 +1586,7 @@ app.get('/api/fishing/user-rods', authenticateUser, async (req, res) => {
         },
         ...(rodAccess || []).map(r => ({
           rod_id: r.rod_id,
-          rod_name: r.rod_id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          rod_name: r.rod_id.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
           is_active: r.is_active,
           granted_at: r.granted_at
         }))
