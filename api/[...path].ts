@@ -147,95 +147,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ==================== AUTH ROUTES (PUBLIC) ====================
     
     if (path === '/auth/register' && method === 'POST') {
-      console.log('[REGISTER] Starting registration process');
-      
-      const { email, username, password } = body;
-      if (!email || !username || !password) {
-        console.log('[REGISTER] Missing fields:', { hasEmail: !!email, hasUsername: !!username, hasPassword: !!password });
-        return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
-      }
+      try {
+        console.log('[REGISTER] Request received');
+        
+        const email = body?.email;
+        const username = body?.username;
+        const password = body?.password;
 
-      const slugEmail = email.trim().toLowerCase();
-      const slugUsername = username.trim().toLowerCase();
-      
-      console.log('[REGISTER] Registering user:', { email: slugEmail, username: slugUsername });
+        if (!email || !username || !password) {
+          console.log('[REGISTER] Missing fields');
+          return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
+        }
 
-      if (isSupabaseConfigured && supabase) {
-        try {
-          console.log('[REGISTER] Checking for duplicate username...');
+        const slugEmail = String(email).trim().toLowerCase();
+        const slugUsername = String(username).trim().toLowerCase();
+
+        // Check local first
+        console.log('[REGISTER] Checking local duplicates...');
+        const localDuplicate = localDb.users.find(u => 
+          u.email.toLowerCase() === slugEmail || u.username.toLowerCase() === slugUsername
+        );
+
+        if (localDuplicate) {
+          console.log('[REGISTER] Local duplicate found');
+          return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
+        }
+
+        // Check Supabase if configured
+        if (isSupabaseConfigured && supabase) {
+          console.log('[REGISTER] Checking Supabase for duplicate username...');
+          
           const { data: existingUsername, error: checkError } = await supabase
             .from('users')
             .select('id')
             .eq('username', slugUsername)
-            .maybeSingle();
-
-          if (checkError) {
-            console.error('[REGISTER] Username check error:', checkError);
-          }
+            .maybeSingle()
+            .catch((e: any) => ({ data: null, error: e }));
 
           if (existingUsername) {
-            console.log('[REGISTER] Username already exists:', slugUsername);
+            console.log('[REGISTER] Username already exists in Supabase');
             return res.status(400).json({ error: 'Username sudah digunakan!' });
           }
 
           console.log('[REGISTER] Calling supabase.auth.signUp...');
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: slugEmail,
-            password: password,
-            options: { data: { username: slugUsername } }
-          });
+          
+          const { data: authData, error: authError } = await supabase
+            .auth.signUp({
+              email: slugEmail,
+              password: String(password),
+              options: { data: { username: slugUsername } }
+            })
+            .catch((e: any) => ({ data: null, error: e }));
 
-          if (authError) {
-            console.error('[REGISTER] signUp error:', authError);
-            if (authError.message.includes('already registered')) {
+          if (authError || !authData?.user) {
+            console.log('[REGISTER] SignUp failed:', authError?.message);
+            if (authError?.message?.includes('already registered')) {
               return res.status(400).json({ error: 'Email sudah terdaftar!' });
             }
-            return res.status(400).json({ error: authError.message });
-          }
-
-          if (!authData?.user) {
-            console.error('[REGISTER] No user in authData');
-            return res.status(500).json({ error: 'Gagal membuat akun. Coba lagi.' });
+            return res.status(400).json({ error: authError?.message || 'Registration failed' });
           }
 
           const authUserId = authData.user.id;
           const sessionToken = authData.session?.access_token || null;
 
-          console.log('[REGISTER] User created:', authUserId, 'Session:', !!sessionToken);
+          console.log('[REGISTER] User created, waiting for trigger...');
+          
+          // Wait for handle_new_user trigger
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-          // Wait for handle_new_user trigger to create public.users row
-          await new Promise(resolve => setTimeout(resolve, 800));
-
-          console.log('[REGISTER] Checking if trigger created profile...');
+          // Check if trigger created profile
           const { data: triggerUser } = await supabase
             .from('users')
             .select('*')
             .eq('id', authUserId)
-            .maybeSingle();
+            .maybeSingle()
+            .catch((e: any) => ({ data: null, error: e }));
 
           if (triggerUser) {
-            console.log('[REGISTER] Trigger created profile, updating username');
-            // Trigger worked — patch username if needed
-            const patchClient = supabaseAdmin || supabase;
-            await patchClient.from('users').update({ username: slugUsername }).eq('id', authUserId);
-            const merged = { ...triggerUser, username: slugUsername };
-            const token = sessionToken
-              || (await supabase.auth.signInWithPassword({ email: slugEmail, password })).data?.session?.access_token
-              || authUserId;
-            const { password: _, ...safeUser } = merged as any;
-            console.log('[REGISTER] ✅ Registration successful (trigger)');
-            return res.json({ 
-              success: true, 
-              user: safeUser, 
+            console.log('[REGISTER] ✅ Profile created by trigger');
+            const { password: _, ...safeUser } = triggerUser as any;
+            
+            // Get session token
+            let token = sessionToken || authUserId;
+            if (!sessionToken && !token) {
+              const signInResult = await supabase
+                .auth.signInWithPassword({ email: slugEmail, password: String(password) })
+                .catch((e: any) => ({ data: null, error: e }));
+              token = signInResult?.data?.session?.access_token || authUserId;
+            }
+            
+            return res.status(200).json({
+              success: true,
+              user: safeUser,
               access_token: token,
               token: token,
-              refresh_token: authData.session?.refresh_token 
+              refresh_token: authData.session?.refresh_token
             });
           }
 
-          console.log('[REGISTER] Trigger did not create profile, inserting manually');
+          console.log('[REGISTER] Trigger did not create profile, inserting manually...');
 
-          // Trigger didn't fire — insert profile manually
+          // Manually insert profile
           const insertClient = sessionToken
             ? createClient(supabaseUrl, supabaseKey, {
                 global: { headers: { Authorization: `Bearer ${sessionToken}` } },
@@ -243,7 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               })
             : supabase;
 
-          const { data: manualUser, error: manualError } = await insertClient
+          const { data: manualUser, error: insertError } = await insertClient
             .from('users')
             .insert({
               id: authUserId,
@@ -253,187 +265,171 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               is_staff: false
             })
             .select('*')
-            .single();
+            .single()
+            .catch((e: any) => ({ data: null, error: e }));
 
-          if (manualError) {
-            console.error('[REGISTER] Manual insert error:', manualError);
-            return res.status(500).json({ error: 'Akun dibuat tapi profil gagal disimpan: ' + manualError.message });
+          if (insertError || !manualUser) {
+            console.log('[REGISTER] Manual insert failed:', insertError?.message);
+            return res.status(400).json({ error: 'Profil gagal disimpan: ' + (insertError?.message || 'Unknown error') });
           }
 
-          const token = sessionToken
-            || (await supabase.auth.signInWithPassword({ email: slugEmail, password })).data?.session?.access_token
-            || authUserId;
-          const { password: _, ...safeManualUser } = manualUser as any;
-          console.log('[REGISTER] ✅ Registration successful (manual insert)');
-          return res.json({ 
-            success: true, 
-            user: safeManualUser, 
+          console.log('[REGISTER] ✅ Profile created manually');
+          const { password: _, ...safeUser } = manualUser as any;
+          
+          let token = sessionToken || authUserId;
+          if (!sessionToken && !token) {
+            const signInResult = await supabase
+              .auth.signInWithPassword({ email: slugEmail, password: String(password) })
+              .catch((e: any) => ({ data: null, error: e }));
+            token = signInResult?.data?.session?.access_token || authUserId;
+          }
+          
+          return res.status(200).json({
+            success: true,
+            user: safeUser,
             access_token: token,
             token: token,
-            refresh_token: authData.session?.refresh_token 
+            refresh_token: authData.session?.refresh_token
           });
-        } catch (e: any) {
-          console.error('[REGISTER] Unexpected error:', {
-            message: e?.message,
-            name: e?.name,
-            stack: e?.stack?.split('\n')[0]
-          });
-          return res.status(500).json({ 
-            error: 'Registration error',
-            details: e?.message || 'Unknown error'
+
+        } else {
+          // Local registration fallback
+          console.log('[REGISTER] Using local registration');
+          
+          const newUser = {
+            id: crypto.randomUUID(),
+            email: slugEmail,
+            username: slugUsername,
+            password: hashPassword(String(password)),
+            balance: 0.00,
+            is_staff: slugUsername === 'admin',
+            created_at: new Date().toISOString()
+          };
+
+          localDb.users.push(newUser);
+          console.log('[REGISTER] ✅ Local user created');
+          
+          const { password: _, ...safeUser } = newUser;
+          return res.status(200).json({
+            success: true,
+            user: safeUser,
+            access_token: newUser.id,
+            token: newUser.id
           });
         }
-      } else {
-        console.log('[REGISTER] Using local auth fallback');
-        const duplicate = localDb.users.find(u => u.email === slugEmail || u.username === slugUsername);
-        if (duplicate) {
-          console.log('[REGISTER] Duplicate found:', { email: slugEmail, username: slugUsername });
-          return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
-        }
 
-        const newUser = {
-          id: crypto.randomUUID(),
-          email: slugEmail,
-          username: slugUsername,
-          password: hashPassword(password),
-          balance: 0.00,
-          is_staff: slugUsername === 'admin',
-          created_at: new Date().toISOString()
-        };
-
-        localDb.users.push(newUser);
-        console.log('[REGISTER] ✅ Local user created:', newUser.username);
-        const { password: _, ...safeUser } = newUser;
-        return res.json({ 
-          success: true, 
-          user: safeUser, 
-          access_token: newUser.id,
-          token: newUser.id
+      } catch (err: any) {
+        console.error('[REGISTER] Exception caught:', err?.message || String(err));
+        return res.status(500).json({
+          error: 'Registration error',
+          details: err?.message || 'Unknown error'
         });
       }
     }
 
     if (path === '/auth/login' && method === 'POST') {
-      console.log('[LOGIN] Processing login request');
-      
       try {
-        const { loginKey, password } = body;
+        console.log('[LOGIN] Request received');
+        
+        const loginKey = body?.loginKey;
+        const password = body?.password;
 
-        // Validate input
         if (!loginKey || !password) {
           console.log('[LOGIN] Missing credentials');
           return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
         }
 
         const slugKey = String(loginKey).trim().toLowerCase();
-        console.log('[LOGIN] Attempting login with key:', slugKey.substring(0, 5) + '...');
 
-        // Try Supabase if configured
-        if (isSupabaseConfigured && supabase) {
-          console.log('[LOGIN] Using Supabase auth');
-          
-          let loginEmail = slugKey;
+        // Try local first (faster, always works)
+        console.log('[LOGIN] Checking local auth...');
+        const localUser = localDb.users.find(u => 
+          (u.email && u.email.toLowerCase() === slugKey) || 
+          (u.username && u.username.toLowerCase() === slugKey)
+        );
 
-          // If not an email, look up by username
-          if (!slugKey.includes('@')) {
-            console.log('[LOGIN] Looking up username');
-            
-            const { data: foundUser, error: findError } = await supabase
-              .from('users')
-              .select('email')
-              .eq('username', slugKey)
-              .maybeSingle();
-
-            if (findError) {
-              console.error('[LOGIN] Lookup error:', findError.message);
-              return res.status(400).json({ error: 'Akun tidak ditemukan!' });
-            }
-
-            if (!foundUser) {
-              console.log('[LOGIN] Username not found');
-              return res.status(400).json({ error: 'Akun tidak ditemukan!' });
-            }
-
-            loginEmail = foundUser.email;
-            console.log('[LOGIN] Found email for username');
-          }
-
-          // Sign in with Supabase Auth
-          console.log('[LOGIN] Calling signInWithPassword');
-          const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: loginEmail,
-            password: password
-          });
-
-          if (signInError) {
-            console.error('[LOGIN] SignIn error:', signInError.message);
-            return res.status(401).json({ error: 'Email/Username atau Password salah!' });
-          }
-
-          if (!sessionData?.session) {
-            console.error('[LOGIN] No session returned');
-            return res.status(401).json({ error: 'Login gagal - tidak ada session' });
-          }
-
-          // Get user profile
-          console.log('[LOGIN] Fetching user profile');
-          const { data: user, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', sessionData.user.id)
-            .single();
-
-          if (userError || !user) {
-            console.error('[LOGIN] Profile fetch error:', userError?.message);
-            return res.status(401).json({ error: 'Profil user tidak ditemukan!' });
-          }
-
-          // Success
-          const { password: _, ...safeUser } = user as any;
-          console.log('[LOGIN] ✅ Success');
+        if (localUser && localUser.password === hashPassword(String(password))) {
+          console.log('[LOGIN] ✅ Local auth success');
+          const { password: _, ...safeUser } = localUser;
           return res.status(200).json({
             success: true,
             user: safeUser,
-            access_token: sessionData.session.access_token,
-            token: sessionData.session.access_token,
-            refresh_token: sessionData.session.refresh_token
-          });
-        } else {
-          // Fallback to local auth
-          console.log('[LOGIN] Using local auth');
-          const user = localDb.users.find(u => 
-            u.email.toLowerCase() === slugKey || u.username.toLowerCase() === slugKey
-          );
-
-          if (!user) {
-            console.log('[LOGIN] User not found in local db');
-            return res.status(401).json({ error: 'Akun tidak terdaftar!' });
-          }
-
-          const passwordHash = hashPassword(password);
-          if (user.password !== passwordHash) {
-            console.log('[LOGIN] Wrong password');
-            return res.status(401).json({ error: 'Password yang diinput salah!' });
-          }
-
-          const { password: _, ...safeUser } = user;
-          console.log('[LOGIN] ✅ Local login success');
-          return res.status(200).json({
-            success: true,
-            user: safeUser,
-            access_token: user.id,
-            token: user.id
+            access_token: localUser.id,
+            token: localUser.id
           });
         }
-      } catch (loginError: any) {
-        console.error('[LOGIN] Unexpected error:', {
-          message: loginError?.message,
-          code: loginError?.code,
-          status: loginError?.status
+
+        // Try Supabase if configured
+        if (!isSupabaseConfigured || !supabase) {
+          console.log('[LOGIN] No local match and Supabase not configured');
+          return res.status(401).json({ error: 'Akun tidak ditemukan!' });
+        }
+
+        console.log('[LOGIN] Attempting Supabase auth...');
+        
+        let loginEmail = slugKey;
+        
+        // If not email format, look up username
+        if (!slugKey.includes('@')) {
+          console.log('[LOGIN] Looking up username in Supabase...');
+          const { data: foundUser, error: lookupError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('username', slugKey)
+            .maybeSingle()
+            .catch((e: any) => ({ data: null, error: e }));
+
+          if (lookupError) {
+            console.log('[LOGIN] Username lookup failed:', lookupError?.message);
+          }
+
+          if (!foundUser) {
+            console.log('[LOGIN] Username not found in Supabase');
+            return res.status(401).json({ error: 'Akun tidak ditemukan!' });
+          }
+
+          loginEmail = foundUser.email;
+          console.log('[LOGIN] Found email for username');
+        }
+
+        // Attempt Supabase sign in
+        const { data: sessionData, error: signInError } = await supabase
+          .auth.signInWithPassword({ email: loginEmail, password: String(password) })
+          .catch((e: any) => ({ data: null, error: e }));
+
+        if (signInError || !sessionData?.session) {
+          console.log('[LOGIN] Supabase sign-in failed');
+          return res.status(401).json({ error: 'Email/Username atau Password salah!' });
+        }
+
+        // Fetch user profile
+        const { data: user, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', sessionData.user.id)
+          .single()
+          .catch((e: any) => ({ data: null, error: e }));
+
+        if (userError || !user) {
+          console.log('[LOGIN] User profile fetch failed');
+          return res.status(401).json({ error: 'Profil user tidak ditemukan!' });
+        }
+
+        console.log('[LOGIN] ✅ Supabase auth success');
+        const { password: _, ...safeUser } = user as any;
+        return res.status(200).json({
+          success: true,
+          user: safeUser,
+          access_token: sessionData.session.access_token,
+          token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token
         });
+
+      } catch (err: any) {
+        console.error('[LOGIN] Exception caught:', err?.message || String(err));
         return res.status(500).json({
           error: 'Login service error',
-          details: loginError?.message || 'Unknown error occurred'
+          details: err?.message || 'Unknown error'
         });
       }
     }
