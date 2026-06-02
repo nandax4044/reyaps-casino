@@ -40,41 +40,38 @@ const localDb = {
 
 // Authenticate token and return user
 async function authenticateToken(token: string): Promise<any | null> {
-  console.log('[AUTH] Authenticating token (length: ' + (token?.length || 0) + ')');
-  
-  if (!token || token.length === 0) {
-    console.log('[AUTH] Token is empty');
+  if (!token) {
+    console.log('[AUTH] Token is empty or null');
     return null;
   }
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      console.log('[AUTH] Calling supabase.auth.getUser()...');
+  try {
+    if (isSupabaseConfigured && supabase) {
+      console.log('[AUTH] Validating Supabase token');
+      
       const { data: authData, error: authError } = await supabase.auth.getUser(token);
       
       if (authError) {
-        console.error('[AUTH] getUser error:', {
-          code: authError.status,
-          message: authError.message
-        });
+        console.error('[AUTH] getUser failed:', authError.message || authError);
         return null;
       }
 
-      if (!authData?.user) {
-        console.log('[AUTH] No user in authData');
+      if (!authData?.user?.id) {
+        console.log('[AUTH] No user in auth response');
         return null;
       }
 
-      console.log('[AUTH] Auth data received, user ID:', authData.user.id);
+      const userId = authData.user.id;
+      console.log('[AUTH] Auth verified, fetching profile for:', userId);
 
       const { data: user, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', authData.user.id)
+        .eq('id', userId)
         .single();
 
       if (userError) {
-        console.error('[AUTH] Database query error:', userError.message);
+        console.error('[AUTH] Profile query failed:', userError.message);
         return null;
       }
       
@@ -83,25 +80,21 @@ async function authenticateToken(token: string): Promise<any | null> {
         return null;
       }
       
-      console.log('[AUTH] ✅ User found:', user.id, user.username);
+      console.log('[AUTH] ✅ User authenticated');
       return user;
-    } catch (e: any) {
-      console.error('[AUTH] Unexpected error:', {
-        message: e?.message,
-        name: e?.name,
-        stack: e?.stack?.split('\n')[0]
-      });
-      return null;
-    }
-  } else {
-    console.log('[AUTH] Supabase not configured, using local auth');
-    const localUser = localDb.users.find(u => u.id === token);
-    if (localUser) {
-      console.log('[AUTH] ✅ Local user found:', localUser.id);
     } else {
-      console.log('[AUTH] Local user not found');
+      console.log('[AUTH] Supabase not configured, using local lookup');
+      const localUser = localDb.users.find(u => u.id === token);
+      if (localUser) {
+        console.log('[AUTH] ✅ Local user found');
+      } else {
+        console.log('[AUTH] Local user not found');
+      }
+      return localUser || null;
     }
-    return localUser || null;
+  } catch (e: any) {
+    console.error('[AUTH] Unexpected error:', e?.message);
+    return null;
   }
 }
 
@@ -111,6 +104,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -120,7 +114,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathSegments = req.query.path;
   const path = Array.isArray(pathSegments) ? `/${pathSegments.join('/')}` : `/${pathSegments || ''}`;
   const method = req.method || 'GET';
-  const body = req.body || {};
+  
+  // Parse body - handle both JSON object and string
+  let body = {};
+  if (req.body) {
+    if (typeof req.body === 'string') {
+      try {
+        body = JSON.parse(req.body);
+      } catch (e) {
+        console.log('[API] Failed to parse body as JSON, using as-is');
+        body = {};
+      }
+    } else {
+      body = req.body;
+    }
+  }
 
   console.log(`[API] ${method} ${path}`);
 
@@ -139,26 +147,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ==================== AUTH ROUTES (PUBLIC) ====================
     
     if (path === '/auth/register' && method === 'POST') {
+      console.log('[REGISTER] Starting registration process');
+      
       const { email, username, password } = body;
       if (!email || !username || !password) {
+        console.log('[REGISTER] Missing fields:', { hasEmail: !!email, hasUsername: !!username, hasPassword: !!password });
         return res.status(400).json({ error: 'Email, Username, dan Password wajib diisi!' });
       }
 
       const slugEmail = email.trim().toLowerCase();
       const slugUsername = username.trim().toLowerCase();
+      
+      console.log('[REGISTER] Registering user:', { email: slugEmail, username: slugUsername });
 
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: existingUsername } = await supabase
+          console.log('[REGISTER] Checking for duplicate username...');
+          const { data: existingUsername, error: checkError } = await supabase
             .from('users')
             .select('id')
             .eq('username', slugUsername)
             .maybeSingle();
 
+          if (checkError) {
+            console.error('[REGISTER] Username check error:', checkError);
+          }
+
           if (existingUsername) {
+            console.log('[REGISTER] Username already exists:', slugUsername);
             return res.status(400).json({ error: 'Username sudah digunakan!' });
           }
 
+          console.log('[REGISTER] Calling supabase.auth.signUp...');
           const { data: authData, error: authError } = await supabase.auth.signUp({
             email: slugEmail,
             password: password,
@@ -166,6 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
 
           if (authError) {
+            console.error('[REGISTER] signUp error:', authError);
             if (authError.message.includes('already registered')) {
               return res.status(400).json({ error: 'Email sudah terdaftar!' });
             }
@@ -173,14 +194,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           if (!authData?.user) {
+            console.error('[REGISTER] No user in authData');
             return res.status(500).json({ error: 'Gagal membuat akun. Coba lagi.' });
           }
 
           const authUserId = authData.user.id;
           const sessionToken = authData.session?.access_token || null;
 
+          console.log('[REGISTER] User created:', authUserId, 'Session:', !!sessionToken);
+
+          // Wait for handle_new_user trigger to create public.users row
           await new Promise(resolve => setTimeout(resolve, 800));
 
+          console.log('[REGISTER] Checking if trigger created profile...');
           const { data: triggerUser } = await supabase
             .from('users')
             .select('*')
@@ -188,6 +214,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .maybeSingle();
 
           if (triggerUser) {
+            console.log('[REGISTER] Trigger created profile, updating username');
+            // Trigger worked — patch username if needed
             const patchClient = supabaseAdmin || supabase;
             await patchClient.from('users').update({ username: slugUsername }).eq('id', authUserId);
             const merged = { ...triggerUser, username: slugUsername };
@@ -195,9 +223,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               || (await supabase.auth.signInWithPassword({ email: slugEmail, password })).data?.session?.access_token
               || authUserId;
             const { password: _, ...safeUser } = merged as any;
-            return res.json({ success: true, user: safeUser, access_token: token, refresh_token: authData.session?.refresh_token });
+            console.log('[REGISTER] ✅ Registration successful (trigger)');
+            return res.json({ 
+              success: true, 
+              user: safeUser, 
+              access_token: token,
+              token: token,
+              refresh_token: authData.session?.refresh_token 
+            });
           }
 
+          console.log('[REGISTER] Trigger did not create profile, inserting manually');
+
+          // Trigger didn't fire — insert profile manually
           const insertClient = sessionToken
             ? createClient(supabaseUrl, supabaseKey, {
                 global: { headers: { Authorization: `Bearer ${sessionToken}` } },
@@ -218,6 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
           if (manualError) {
+            console.error('[REGISTER] Manual insert error:', manualError);
             return res.status(500).json({ error: 'Akun dibuat tapi profil gagal disimpan: ' + manualError.message });
           }
 
@@ -225,13 +264,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             || (await supabase.auth.signInWithPassword({ email: slugEmail, password })).data?.session?.access_token
             || authUserId;
           const { password: _, ...safeManualUser } = manualUser as any;
-          return res.json({ success: true, user: safeManualUser, access_token: token, refresh_token: authData.session?.refresh_token });
+          console.log('[REGISTER] ✅ Registration successful (manual insert)');
+          return res.json({ 
+            success: true, 
+            user: safeManualUser, 
+            access_token: token,
+            token: token,
+            refresh_token: authData.session?.refresh_token 
+          });
         } catch (e: any) {
-          return res.status(500).json({ error: e.message || 'Server error' });
+          console.error('[REGISTER] Unexpected error:', {
+            message: e?.message,
+            name: e?.name,
+            stack: e?.stack?.split('\n')[0]
+          });
+          return res.status(500).json({ 
+            error: 'Registration error',
+            details: e?.message || 'Unknown error'
+          });
         }
       } else {
+        console.log('[REGISTER] Using local auth fallback');
         const duplicate = localDb.users.find(u => u.email === slugEmail || u.username === slugUsername);
         if (duplicate) {
+          console.log('[REGISTER] Duplicate found:', { email: slugEmail, username: slugUsername });
           return res.status(400).json({ error: 'Email atau Username sudah terdaftar!' });
         }
 
@@ -246,25 +302,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
 
         localDb.users.push(newUser);
+        console.log('[REGISTER] ✅ Local user created:', newUser.username);
         const { password: _, ...safeUser } = newUser;
-        return res.json({ success: true, user: safeUser, access_token: newUser.id });
+        return res.json({ 
+          success: true, 
+          user: safeUser, 
+          access_token: newUser.id,
+          token: newUser.id
+        });
       }
     }
 
     if (path === '/auth/login' && method === 'POST') {
-      const { loginKey, password } = body;
+      console.log('[LOGIN] Processing login request');
+      
+      try {
+        const { loginKey, password } = body;
 
-      if (!loginKey || !password) {
-        return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
-      }
+        // Validate input
+        if (!loginKey || !password) {
+          console.log('[LOGIN] Missing credentials');
+          return res.status(400).json({ error: 'Email/Username dan Password wajib diisi!' });
+        }
 
-      const slugKey = loginKey.trim().toLowerCase();
+        const slugKey = String(loginKey).trim().toLowerCase();
+        console.log('[LOGIN] Attempting login with key:', slugKey.substring(0, 5) + '...');
 
-      if (isSupabaseConfigured && supabase) {
-        try {
+        // Try Supabase if configured
+        if (isSupabaseConfigured && supabase) {
+          console.log('[LOGIN] Using Supabase auth');
+          
           let loginEmail = slugKey;
 
+          // If not an email, look up by username
           if (!slugKey.includes('@')) {
+            console.log('[LOGIN] Looking up username');
+            
             const { data: foundUser, error: findError } = await supabase
               .from('users')
               .select('email')
@@ -272,34 +345,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               .maybeSingle();
 
             if (findError) {
-              return res.status(400).json({ error: 'Database error: ' + findError.message });
+              console.error('[LOGIN] Lookup error:', findError.message);
+              return res.status(400).json({ error: 'Akun tidak ditemukan!' });
             }
 
             if (!foundUser) {
-              return res.status(400).json({ 
-                error: 'Akun tidak ditemukan! Pastikan username sudah terdaftar.' 
-              });
+              console.log('[LOGIN] Username not found');
+              return res.status(400).json({ error: 'Akun tidak ditemukan!' });
             }
 
             loginEmail = foundUser.email;
+            console.log('[LOGIN] Found email for username');
           }
 
+          // Sign in with Supabase Auth
+          console.log('[LOGIN] Calling signInWithPassword');
           const { data: sessionData, error: signInError } = await supabase.auth.signInWithPassword({
             email: loginEmail,
             password: password
           });
 
           if (signInError) {
-            if (signInError.message.includes('Invalid login credentials')) {
-              return res.status(400).json({ error: 'Email/Username atau Password salah!' });
-            }
-            return res.status(400).json({ error: signInError.message });
+            console.error('[LOGIN] SignIn error:', signInError.message);
+            return res.status(401).json({ error: 'Email/Username atau Password salah!' });
           }
 
-          if (!sessionData?.user || !sessionData?.session) {
-            return res.status(400).json({ error: 'Login gagal. Coba lagi.' });
+          if (!sessionData?.session) {
+            console.error('[LOGIN] No session returned');
+            return res.status(401).json({ error: 'Login gagal - tidak ada session' });
           }
 
+          // Get user profile
+          console.log('[LOGIN] Fetching user profile');
           const { data: user, error: userError } = await supabase
             .from('users')
             .select('*')
@@ -307,31 +384,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
           if (userError || !user) {
-            return res.status(400).json({ error: 'Profil user tidak ditemukan!' });
+            console.error('[LOGIN] Profile fetch error:', userError?.message);
+            return res.status(401).json({ error: 'Profil user tidak ditemukan!' });
           }
 
+          // Success
           const { password: _, ...safeUser } = user as any;
-          return res.json({
+          console.log('[LOGIN] ✅ Success');
+          return res.status(200).json({
             success: true,
             user: safeUser,
             access_token: sessionData.session.access_token,
+            token: sessionData.session.access_token,
             refresh_token: sessionData.session.refresh_token
           });
-        } catch (e: any) {
-          return res.status(500).json({ error: 'Database service failure: ' + e.message });
-        }
-      } else {
-        const user = localDb.users.find(u => u.email === slugKey || u.username === slugKey);
-        if (!user) {
-          return res.status(400).json({ error: 'Akun tidak terdaftar!' });
-        }
+        } else {
+          // Fallback to local auth
+          console.log('[LOGIN] Using local auth');
+          const user = localDb.users.find(u => 
+            u.email.toLowerCase() === slugKey || u.username.toLowerCase() === slugKey
+          );
 
-        if (user.password !== hashPassword(password)) {
-          return res.status(400).json({ error: 'Password yang diinput salah!' });
-        }
+          if (!user) {
+            console.log('[LOGIN] User not found in local db');
+            return res.status(401).json({ error: 'Akun tidak terdaftar!' });
+          }
 
-        const { password: _, ...safeUser } = user;
-        return res.json({ success: true, user: safeUser, access_token: user.id });
+          const passwordHash = hashPassword(password);
+          if (user.password !== passwordHash) {
+            console.log('[LOGIN] Wrong password');
+            return res.status(401).json({ error: 'Password yang diinput salah!' });
+          }
+
+          const { password: _, ...safeUser } = user;
+          console.log('[LOGIN] ✅ Local login success');
+          return res.status(200).json({
+            success: true,
+            user: safeUser,
+            access_token: user.id,
+            token: user.id
+          });
+        }
+      } catch (loginError: any) {
+        console.error('[LOGIN] Unexpected error:', {
+          message: loginError?.message,
+          code: loginError?.code,
+          status: loginError?.status
+        });
+        return res.status(500).json({
+          error: 'Login service error',
+          details: loginError?.message || 'Unknown error occurred'
+        });
       }
     }
 
