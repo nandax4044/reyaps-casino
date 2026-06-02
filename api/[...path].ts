@@ -532,14 +532,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               });
             }
 
-            // Check bait
-            const { data: inventory, error: invError } = await supabaseAdmin
+            // Check bait - Try new table first, fallback to old table
+            let inventory = null;
+            let invError = null;
+            
+            // Try user_fishing_inventory first (new table)
+            const { data: newInv, error: newErr } = await supabaseAdmin
               .from('user_fishing_inventory')
               .select('bait_balance, equipped_rod')
               .eq('user_id', user.id)
               .maybeSingle();
 
-            console.log('[AFK START] Inventory check:', { inventory, error: invError });
+            console.log('[AFK START] Check user_fishing_inventory:', { data: newInv, error: newErr });
+
+            if (newInv) {
+              inventory = { bait_balance: newInv.bait_balance, equipped_rod: newInv.equipped_rod };
+            } else if (newErr && newErr.code === 'PGRST116') {
+              // Table doesn't exist or no data, try old table
+              console.log('[AFK START] Trying fallback to fishing_inventory...');
+              const { data: oldInv, error: oldErr } = await supabaseAdmin
+                .from('fishing_inventory')
+                .select('bait')
+                .eq('user_id', user.id)
+                .maybeSingle();
+              
+              console.log('[AFK START] Check fishing_inventory:', { data: oldInv, error: oldErr });
+              
+              if (oldInv) {
+                inventory = { bait_balance: oldInv.bait, equipped_rod: null };
+              }
+              invError = oldErr;
+            } else {
+              invError = newErr;
+            }
+
+            console.log('[AFK START] Final inventory check:', { inventory, error: invError });
 
             if (!inventory || inventory.bait_balance <= 0) {
               console.log('[AFK START] No bait available. Bait:', inventory?.bait_balance || 0);
@@ -609,6 +636,111 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(500).json({ error: 'Gagal stop AFK: ' + e.message });
           }
         }
+        return res.status(500).json({ error: 'Database not configured' });
+      }
+
+      // Convert fishing saldo to main balance
+      if (path === '/fishing/convert-saldo' && method === 'POST') {
+        const { amount } = body;
+
+        console.log('[CONVERT SALDO] Request from user:', user.id, 'amount:', amount);
+
+        if (!amount || amount <= 0) {
+          return res.status(400).json({ error: 'Amount harus lebih dari 0' });
+        }
+
+        if (isSupabaseConfigured && supabaseAdmin) {
+          try {
+            // Get current fishing saldo from both tables (try new first, fallback to old)
+            let fishingSaldo = 0;
+            let useNewTable = false;
+
+            // Try user_fishing_inventory first
+            const { data: newInv, error: newErr } = await supabaseAdmin
+              .from('user_fishing_inventory')
+              .select('fishing_saldo')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            console.log('[CONVERT SALDO] Check user_fishing_inventory:', { data: newInv, error: newErr });
+
+            if (newInv) {
+              fishingSaldo = newInv.fishing_saldo || 0;
+              useNewTable = true;
+            } else if (newErr && newErr.code === 'PGRST116') {
+              // Try old table
+              const { data: oldInv } = await supabaseAdmin
+                .from('fishing_inventory')
+                .select('fishing_saldo')
+                .eq('user_id', user.id)
+                .maybeSingle();
+              
+              console.log('[CONVERT SALDO] Check fishing_inventory:', { data: oldInv });
+              fishingSaldo = oldInv?.fishing_saldo || 0;
+            }
+
+            console.log('[CONVERT SALDO] Current fishing saldo:', fishingSaldo);
+
+            if (fishingSaldo < amount) {
+              return res.status(400).json({ 
+                error: `Fishing saldo tidak cukup! Saldo: ${fishingSaldo}, Butuh: ${amount}` 
+              });
+            }
+
+            // Deduct from fishing saldo
+            const newFishingSaldo = fishingSaldo - amount;
+
+            if (useNewTable) {
+              await supabaseAdmin
+                .from('user_fishing_inventory')
+                .update({ 
+                  fishing_saldo: newFishingSaldo,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id);
+            } else {
+              await supabaseAdmin
+                .from('fishing_inventory')
+                .update({ 
+                  fishing_saldo: newFishingSaldo,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id);
+            }
+
+            // Add to main balance
+            const { data: userData } = await supabaseAdmin
+              .from('users')
+              .select('balance')
+              .eq('id', user.id)
+              .single();
+
+            const newBalance = (userData?.balance || 0) + amount;
+
+            await supabaseAdmin
+              .from('users')
+              .update({ balance: newBalance })
+              .eq('id', user.id);
+
+            console.log('[CONVERT SALDO] Success:', { 
+              converted: amount, 
+              new_fishing_saldo: newFishingSaldo, 
+              new_balance: newBalance 
+            });
+
+            return res.json({ 
+              success: true, 
+              message: `Berhasil convert ${amount} fishing saldo ke balance`,
+              fishing_saldo: newFishingSaldo,
+              balance: newBalance
+            });
+          } catch (e: any) {
+            console.error('[CONVERT SALDO] Error:', e);
+            return res.status(500).json({ error: 'Gagal convert saldo: ' + e.message });
+          }
+        }
+
+        console.log('[CONVERT SALDO] Database not configured');
         return res.status(500).json({ error: 'Database not configured' });
       }
     }
