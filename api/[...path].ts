@@ -43,7 +43,10 @@ async function authenticateToken(token: string): Promise<any | null> {
   if (isSupabaseConfigured && supabase) {
     try {
       const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !authData?.user) return null;
+      if (authError || !authData?.user) {
+        console.log('[AUTH] getUser failed:', authError?.message);
+        return null;
+      }
 
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -51,9 +54,19 @@ async function authenticateToken(token: string): Promise<any | null> {
         .eq('id', authData.user.id)
         .single();
 
-      if (userError || !user) return null;
+      if (userError) {
+        console.log('[AUTH] User query failed:', userError.message);
+        return null;
+      }
+      
+      if (!user) {
+        console.log('[AUTH] User not found in database');
+        return null;
+      }
+      
       return user;
-    } catch (e) {
+    } catch (e: any) {
+      console.error('[AUTH] Unexpected error:', e.message);
       return null;
     }
   } else {
@@ -330,8 +343,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // User profile
     if (path === '/user/profile' && method === 'GET') {
-      const { password: _, ...safeUser } = user;
-      return res.json({ user: safeUser, database: isSupabaseConfigured ? 'supabase' : 'mock_memory' });
+      try {
+        if (!user) {
+          return res.status(401).json({ error: 'User not authenticated' });
+        }
+
+        // Safely extract password
+        const userObj = user as any;
+        const { password: _, ...safeUser } = userObj;
+        
+        return res.json({ 
+          user: safeUser || {}, 
+          database: isSupabaseConfigured ? 'supabase' : 'mock_memory' 
+        });
+      } catch (profileError: any) {
+        console.error('[PROFILE ERROR]', profileError);
+        return res.status(500).json({ 
+          error: 'Failed to get profile', 
+          details: profileError?.message || 'Unknown error'
+        });
+      }
     }
 
     // User inventory
@@ -847,10 +878,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error: any) {
-    console.error('[API ERROR]', error);
+    console.error('[API ERROR]', {
+      path: path,
+      method: method,
+      message: error?.message,
+      stack: error?.stack,
+      error: error
+    });
     return res.status(500).json({ 
       error: 'Internal server error',
-      message: error.message
+      message: error?.message || 'Unknown error',
+      path: path,
+      method: method
     });
   }
 }
