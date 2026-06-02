@@ -82,8 +82,8 @@ async function catchAndSellFish(userId: string) {
     
     // CHECK BAIT FIRST
     const { data: inventory, error: inventoryError } = await supabase
-      .from('user_fishing_inventory')
-      .select('bait_balance, fishing_saldo, total_fish_caught')
+      .from('fishing_inventory')
+      .select('bait, fishing_saldo, total_fish_caught')
       .eq('user_id', userId)
       .single();
 
@@ -98,10 +98,10 @@ async function catchAndSellFish(userId: string) {
       return null;
     }
 
-    console.log(`[AFK-FISHING] ${userId}: 📊 Current stats - Bait: ${inventory.bait_balance}, Balance: ${inventory.fishing_saldo} WL, Fish: ${inventory.total_fish_caught}`);
+    console.log(`[AFK-FISHING] ${userId}: 📊 Current stats - Bait: ${inventory.bait}, Balance: ${inventory.fishing_saldo} WL, Fish: ${inventory.total_fish_caught}`);
 
-    if (inventory.bait_balance <= 0) {
-      console.log(`[AFK-FISHING] ${userId}: ❌ No bait remaining (${inventory.bait_balance}), stopping fishing`);
+    if (inventory.bait <= 0) {
+      console.log(`[AFK-FISHING] ${userId}: ❌ No bait remaining (${inventory.bait}), stopping fishing`);
       void stopAFKFishing(userId);
       return null;
     }
@@ -154,24 +154,35 @@ async function catchAndSellFish(userId: string) {
       console.log(`[AFK-FISHING] ${userId}: ✅ Fish count incremented`);
     }
 
-    // DECREASE BAIT BY 1
-    console.log(`[AFK-FISHING] ${userId}: 🪱 Decreasing bait (${inventory.bait_balance} → ${inventory.bait_balance - 1})...`);
-    const { error: baitError } = await supabase
-      .from('user_fishing_inventory')
-      .update({ bait_balance: inventory.bait_balance - 1 })
-      .eq('user_id', userId);
+    // DECREASE BAIT BY 1 using consume_bait function
+    console.log(`[AFK-FISHING] ${userId}: 🪱 Consuming bait (${inventory.bait} → ${inventory.bait - 1})...`);
+    const { data: baitResult, error: baitError } = await supabase.rpc('consume_bait', {
+      p_user_id: userId
+    });
 
     if (baitError) {
-      console.error(`[AFK-FISHING] ${userId}: ❌ Error updating bait:`, baitError);
+      console.error(`[AFK-FISHING] ${userId}: ❌ Error consuming bait:`, baitError);
+      // Try direct update as fallback
+      const { error: directError } = await supabase
+        .from('fishing_inventory')
+        .update({ bait: inventory.bait - 1, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+      
+      if (directError) {
+        console.error(`[AFK-FISHING] ${userId}: ❌ Fallback bait update also failed:`, directError);
+      } else {
+        console.log(`[AFK-FISHING] ${userId}: ✅ Bait decreased (fallback method)`);
+      }
     } else {
-      console.log(`[AFK-FISHING] ${userId}: ✅ Bait decreased`);
+      console.log(`[AFK-FISHING] ${userId}: ✅ Bait consumed - Remaining: ${baitResult[0]?.remaining_bait}`);
     }
 
-    console.log(`[AFK-FISHING] ${userId}: ✅✅✅ Caught ${fish.name} ${fish.lb}LB → +${fish.sellPrice} WL (Bait: ${inventory.bait_balance} → ${inventory.bait_balance - 1})`);
+    console.log(`[AFK-FISHING] ${userId}: ✅✅✅ Caught ${fish.name} ${fish.lb}LB → +${fish.sellPrice} WL (Bait: ${inventory.bait} → ${inventory.bait - 1})`);
 
     return fish;
   } catch (error) {
     console.error(`[AFK-FISHING] ${userId}: ❌❌❌ Error catching fish:`, error);
+    // DON'T stop fishing on error - just log and continue
     return null;
   }
 }
