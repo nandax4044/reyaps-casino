@@ -322,6 +322,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ success: true, inventoryItem: null, balance: finalBalance });
     }
 
+    // ==================== USER FISHING ENDPOINTS ====================
+    if (path.startsWith('/fishing/')) {
+      // Check fishing access
+      if (path === '/fishing/check-access' && method === 'GET') {
+        if (isSupabaseConfigured && supabase) {
+          const { data } = await supabase
+            .from('fishing_access')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .gte('expires_at', new Date().toISOString())
+            .maybeSingle();
+
+          return res.json({ hasAccess: !!data, access: data || null });
+        }
+        return res.json({ hasAccess: false, access: null });
+      }
+
+      // Get user fishing inventory
+      if (path === '/fishing/inventory' && method === 'GET') {
+        if (isSupabaseConfigured && supabase) {
+          const { data } = await supabase
+            .from('fishing_inventory')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          return res.json({
+            inventory: data || { user_id: user.id, bait: 0, fishing_saldo: 0 }
+          });
+        }
+        return res.json({ inventory: { user_id: user.id, bait: 0, fishing_saldo: 0 } });
+      }
+
+      // Get user rods
+      if (path === '/fishing/user-rods' && method === 'GET') {
+        if (isSupabaseConfigured && supabase) {
+          const { data } = await supabase
+            .from('user_rods')
+            .select('*')
+            .eq('user_id', user.id);
+
+          const rods = [
+            { rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true },
+            ...(data || []).map((r: any) => ({
+              rod_id: r.rod_id,
+              rod_name: r.rod_id.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              is_active: true
+            }))
+          ];
+
+          return res.json({ rods });
+        }
+        return res.json({ rods: [{ rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true }] });
+      }
+
+      // AFK status
+      if (path === '/fishing/afk/status' && method === 'GET') {
+        return res.json({ isActive: false, message: 'AFK system unavailable' });
+      }
+
+      // Fishing logs
+      if (path === '/fishing/logs' && method === 'GET') {
+        if (isSupabaseConfigured && supabase) {
+          const { data } = await supabase
+            .from('fish_inventory')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('caught_at', { ascending: false })
+            .limit(100);
+
+          return res.json({ logs: data || [], statistics: { totalCaught: (data || []).length } });
+        }
+        return res.json({ logs: [], statistics: { totalCaught: 0 } });
+      }
+
+      // Claim pending
+      if (path === '/fishing/claim-pending' && method === 'POST') {
+        return res.json({ success: true, claimed: [] });
+      }
+
+      // Start AFK
+      if (path === '/fishing/afk/start' && method === 'POST') {
+        return res.json({ success: false, message: 'AFK system unavailable' });
+      }
+
+      // Stop AFK
+      if (path === '/fishing/afk/stop' && method === 'POST') {
+        return res.json({ success: false, message: 'AFK system unavailable' });
+      }
+    }
+
     // ==================== ADMIN ROUTES ====================
     if (path.startsWith('/admin/')) {
       if (!user.is_staff) {
