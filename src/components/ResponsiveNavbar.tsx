@@ -3,11 +3,10 @@ import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, Fish } fr
 
 interface ResponsiveNavbarProps {
   user: any;
-  activeGame: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin';
-  onNavigate: (game: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin') => void;
+  activeGame: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin';
+  onNavigate: (game: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin') => void;
   onLogout: () => void;
   gamesPublished?: {
-    crash?: boolean;
     cases?: boolean;
   };
 }
@@ -28,14 +27,8 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   }, []);
 
   // Close menu when navigating
-  const handleNavClick = (game: 'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin') => {
+  const handleNavClick = (game: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin') => {
     // Check if game is published
-    if (game === 'crash' && gamesPublished?.crash === false) {
-      setMaintenanceNotif('Crash Game sedang dalam perbaikan. Silakan coba lagi nanti.');
-      setTimeout(() => setMaintenanceNotif(null), 3000);
-      setIsMenuOpen(false);
-      return;
-    }
     if (game === 'cases' && gamesPublished?.cases === false) {
       setMaintenanceNotif('Case Opening sedang dalam perbaikan. Silakan coba lagi nanti.');
       setTimeout(() => setMaintenanceNotif(null), 3000);
@@ -50,7 +43,6 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   const navLinks = [
     { id: 'lobby', label: 'Home', icon: Home },
     { id: 'cases', label: 'Case Opening', icon: Gamepad2 },
-    { id: 'crash', label: 'Crash Game', icon: Settings },
     { id: 'fishing', label: 'AFK Fishing', icon: Fish },
     { id: 'profile', label: 'Dashboard', icon: User },
   ];

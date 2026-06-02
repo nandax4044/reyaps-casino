@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import CrashGame from './components/CrashGame';
 import CaseOpeningGame from './components/CaseOpeningGame';
 import { FishingGameV3 } from './components/FishingGameV3';
 import { AuthScreen } from './components/AuthScreen';
@@ -97,12 +96,11 @@ export default function App() {
   };
 
   // --- Dynamic Tab Selector ---
-  const [activeGame, setActiveGame] = useState<'lobby' | 'crash' | 'cases' | 'fishing' | 'profile' | 'admin'>('lobby');
+  const [activeGame, setActiveGame] = useState<'lobby' | 'cases' | 'fishing' | 'profile' | 'admin'>('lobby');
   const [mobileSidebarTab, setMobileSidebarTab] = useState<'players' | 'chat'>('players');
 
   // --- Games Published Status ---
   const [casesPublished, setCasesPublished] = useState<boolean>(true);
-  const [crashPublished, setCrashPublished] = useState<boolean>(true);
 
   const loadGamesPublishedStatus = async () => {
     try {
@@ -110,12 +108,6 @@ export default function App() {
       const casesData = await API.getGameConfig('cases');
       if (casesData.published !== undefined) {
         setCasesPublished(casesData.published);
-      }
-
-      // Load crash published status
-      const crashData = await API.getGameConfig('crash');
-      if (crashData.published !== undefined) {
-        setCrashPublished(crashData.published);
       }
     } catch (e) {
       console.warn('Failed to load games published status', e);
@@ -202,7 +194,6 @@ export default function App() {
           onNavigate={setActiveGame}
           onLogout={handleLogout}
           gamesPublished={{
-            crash: crashPublished,
             cases: casesPublished
           }}
         />
@@ -226,7 +217,6 @@ export default function App() {
                 onOpenAdmin={() => setActiveGame('admin')}
                 onLogout={handleLogout}
                 gamesPublished={{
-                  crash: crashPublished,
                   cases: casesPublished
                 }}
               />
@@ -270,14 +260,8 @@ export default function App() {
         )}
 
         {/* ========== GAME PAGES - NO SIDEBAR ========== */}
-        {(activeGame === 'cases' || activeGame === 'crash' || activeGame === 'fishing') && (
+        {(activeGame === 'cases' || activeGame === 'fishing') && (
           <div className="w-full">
-            {activeGame === 'crash' && (
-              <div className="w-full animate-fade-in">
-                <CrashGame user={user} refreshUser={fetchUserProfile} />
-              </div>
-            )}
-
             {activeGame === 'cases' && (
               <div className="w-full animate-fade-in">
                 <CaseOpeningGame user={user} refreshUser={fetchUserProfile} />

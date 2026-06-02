@@ -3,12 +3,11 @@ import { Gift, TrendingUp, Crown, Zap, Gamepad2, Fish, Sparkles } from 'lucide-r
 
 interface LobbyProps {
   user: any;
-  onSelectGame: (game: 'crash' | 'cases' | 'fishing') => void;
+  onSelectGame: (game: 'cases' | 'fishing') => void;
   onOpenProfile: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
   gamesPublished?: {
-    crash?: boolean;
     cases?: boolean;
   };
 }
@@ -25,17 +24,6 @@ export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout
       image: '/images/intichest2.png',
       stats: '15 Chests • 75 Items',
       published: gamesPublished?.cases !== false
-    },
-    {
-      id: 'crash' as const,
-      name: 'Crash Game',
-      description: 'Bet and cashout before crash to multiply your balance',
-      icon: TrendingUp,
-      color: 'from-orange-500 to-red-500',
-      bgGlow: 'from-orange-500/20 to-red-500/20',
-      image: '/images/crashlogo.png',
-      stats: 'Multiplier • High Risk',
-      published: gamesPublished?.crash !== false
     },
     {
       id: 'fishing' as const,
