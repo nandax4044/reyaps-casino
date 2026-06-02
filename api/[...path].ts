@@ -436,46 +436,192 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // ==================== ADMIN ROUTES ====================
+      // ==================== USER FISHING ROUTES ====================
+      if (path.startsWith('/fishing/')) {
+        // Check fishing access
+        if (path === '/fishing/check-access' && method === 'GET') {
+          if (isSupabaseConfigured && supabase) {
+            try {
+              const { data, error } = await supabase
+                .from('afk_access')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('feature', 'fishing')
+                .eq('is_active', true)
+                .gte('expires_at', new Date().toISOString())
+                .order('expires_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
 
-    if (path.startsWith('/admin/')) {
-      if (!user.is_staff) {
-        return res.status(403).json({ error: 'Akses Ditolak: Anda bukan staff/admin!' });
-      }
+              if (error) throw error;
+              return res.json({ hasAccess: !!data, access: data || null });
+            } catch (error: any) {
+              console.error('[FISHING] Check access error:', error);
+              return res.status(500).json({ error: 'Failed to check access' });
+            }
+          }
 
-      // Get all users
-      if (path === '/admin/users' && method === 'GET') {
-        if (isSupabaseConfigured && supabaseAdmin) {
-          const { data: list, error } = await supabaseAdmin
-            .from('users')
-            .select('id, email, username, balance, is_staff, created_at')
-            .order('created_at', { ascending: false });
+          return res.json({ hasAccess: false, access: null });
+        }
 
-          if (error) throw error;
-          return res.json({ users: list });
-        } else {
-          return res.json({ users: localDb.users.map(({ password, ...u }) => u).reverse() });
+        // Get user fishing inventory
+        if (path === '/fishing/inventory' && method === 'GET') {
+          if (isSupabaseConfigured && supabase) {
+            try {
+              const { data, error } = await supabase
+                .from('user_fishing_inventory')
+                .select('*')
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+              if (error) throw error;
+
+              return res.json({
+                inventory: data || {
+                  user_id: user.id,
+                  equipped_rod: null,
+                  fishing_gems: 0,
+                  fishing_saldo: 0,
+                  total_fish_caught: 0,
+                  bait_balance: 0
+                }
+              });
+            } catch (error: any) {
+              console.error('[FISHING] Get inventory error:', error);
+              return res.status(500).json({ error: 'Failed to get inventory' });
+            }
+          }
+
+          return res.json({
+            inventory: {
+              user_id: user.id,
+              equipped_rod: null,
+              fishing_gems: 0,
+              fishing_saldo: 0,
+              total_fish_caught: 0,
+              bait_balance: 0
+            }
+          });
+        }
+
+        // Get user rods
+        if (path === '/fishing/user-rods' && method === 'GET') {
+          if (isSupabaseConfigured && supabaseAdmin) {
+            try {
+              const { data, error } = await supabaseAdmin
+                .from('user_rod_access')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('is_active', true);
+
+              if (error) throw error;
+
+              const rods = [
+                {
+                  rod_id: 'basic_rod',
+                  rod_name: 'Basic Rod',
+                  is_active: true,
+                  granted_at: new Date().toISOString()
+                },
+                ...(data || []).map((r: any) => ({
+                  rod_id: r.rod_id,
+                  rod_name: r.rod_id.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+                  is_active: r.is_active,
+                  granted_at: r.granted_at
+                }))
+              ];
+
+              return res.json({ rods });
+            } catch (error: any) {
+              console.error('[FISHING] Get user rods error:', error);
+              return res.status(500).json({ error: 'Failed to get user rods' });
+            }
+          }
+
+          return res.json({ rods: [{ rod_id: 'basic_rod', rod_name: 'Basic Rod', is_active: true }] });
+        }
+
+        // AFK fishing status
+        if (path === '/fishing/afk/status' && method === 'GET') {
+          return res.json({
+            isActive: false,
+            message: 'AFK fishing status is unavailable in this deployment.'
+          });
+        }
+
+        // Fishing logs
+        if (path === '/fishing/logs' && method === 'GET') {
+          if (isSupabaseConfigured && supabase) {
+            try {
+              const { data: fishRecords, error } = await supabase
+                .from('fish_inventory')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('caught_at', { ascending: false })
+                .limit(100);
+
+              if (error) throw error;
+
+              const logs = fishRecords || [];
+              const totalCaught = logs.length;
+              const totalSold = logs.filter((f: any) => f.is_sold).length;
+              const totalUnsold = logs.filter((f: any) => !f.is_sold).length;
+              const totalValue = logs.reduce((sum: number, f: any) => sum + (f.sell_price || 0), 0);
+
+              const fishByType: Record<string, { count: number; totalLb: number; totalValue: number }> = {};
+              logs.forEach((fish: any) => {
+                if (!fishByType[fish.fish_name]) {
+                  fishByType[fish.fish_name] = { count: 0, totalLb: 0, totalValue: 0 };
+                }
+                fishByType[fish.fish_name].count++;
+                fishByType[fish.fish_name].totalLb += fish.lb || 0;
+                fishByType[fish.fish_name].totalValue += fish.sell_price || 0;
+              });
+
+              return res.json({
+                logs,
+                statistics: {
+                  totalCaught,
+                  totalSold,
+                  totalUnsold,
+                  totalValue,
+                  fishByType
+                }
+              });
+            } catch (error: any) {
+              console.error('[FISHING] Get logs error:', error);
+              return res.status(500).json({ error: 'Failed to get fishing logs' });
+            }
+          }
+
+          return res.json({
+            logs: [],
+            statistics: {
+              totalCaught: 0,
+              totalSold: 0,
+              totalUnsold: 0,
+              totalValue: 0,
+              fishByType: {}
+            }
+          });
+        }
+
+        // Claim pending fish
+        if (path === '/fishing/claim-pending' && method === 'POST') {
+          return res.json({ success: true, claimed: [] });
+        }
+
+        // Start AFK fishing
+        if (path === '/fishing/afk/start' && method === 'POST') {
+          return res.json({ success: true, message: 'AFK fishing start is not available in this deployment.' });
+        }
+
+        // Stop AFK fishing
+        if (path === '/fishing/afk/stop' && method === 'POST') {
+          return res.json({ success: true, message: 'AFK fishing stop is not available in this deployment.' });
         }
       }
 
-      // Update balance
-      if (path.match(/\/admin\/users\/[^/]+\/balance/) && method === 'POST') {
-        const userId = path.split('/')[3];
-        const cleanBalance = parseFloat(body.balance);
-
-        if (isNaN(cleanBalance)) {
-          return res.status(400).json({ error: 'Saldo tidak valid!' });
-        }
-
-        if (isSupabaseConfigured && supabaseAdmin) {
-          const { data: updated, error } = await supabaseAdmin
-            .from('users')
-            .update({ balance: cleanBalance })
-            .eq('id', userId)
-            .select('*')
-            .single();
-
-          if (error) throw error;
           return res.json({ success: true, user: updated });
         } else {
           const targetUser = localDb.users.find(u => u.id === userId);
@@ -561,6 +707,77 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           return res.json({ success: true, access: [] });
+        }
+
+        // Get fishing rod access for a specific user
+        if (path.startsWith('/admin/fishing/user-rods/') && method === 'GET') {
+          const userId = path.split('/')[4];
+          if (!userId) {
+            return res.status(400).json({ error: 'Missing userId' });
+          }
+
+          if (isSupabaseConfigured && supabaseAdmin) {
+            try {
+              const { data, error } = await supabaseAdmin
+                .from('user_rod_access')
+                .select('*')
+                .eq('user_id', userId);
+
+              if (error) throw error;
+              return res.json({ success: true, rods: data || [] });
+            } catch (error: any) {
+              console.error('[ADMIN] Get user rod access error:', error);
+              return res.status(500).json({ error: 'Failed to get user rod access' });
+            }
+          }
+
+          return res.json({ success: true, rods: [] });
+        }
+
+        // Grant rod access to a user
+        if (path === '/admin/fishing/grant-rod' && method === 'POST') {
+          const { user_id, rod_id, notes } = body;
+
+          if (!user_id || !rod_id) {
+            return res.status(400).json({ error: 'Missing required fields: user_id and rod_id' });
+          }
+
+          const validRods = ['ez_rod', 'basic_rod', 'lico_rod', 'golden_rod', 'thanksgiving_rod'];
+          if (!validRods.includes(rod_id)) {
+            return res.status(400).json({ error: 'Invalid rod_id. Valid rods: ez_rod, basic_rod, lico_rod, golden_rod, thanksgiving_rod' });
+          }
+
+          if (isSupabaseConfigured && supabaseAdmin) {
+            try {
+              const { data, error } = await supabaseAdmin
+                .from('user_rod_access')
+                .upsert(
+                  {
+                    user_id,
+                    rod_id,
+                    granted_by: user.id,
+                    granted_at: new Date().toISOString(),
+                    is_active: true,
+                    notes
+                  },
+                  { onConflict: 'user_id,rod_id' }
+                )
+                .select()
+                .single();
+
+              if (error) {
+                console.error('[ADMIN] Grant rod access error:', error);
+                return res.status(500).json({ error: error.message || 'Failed to grant rod access' });
+              }
+
+              return res.json({ success: true, rod: data });
+            } catch (error: any) {
+              console.error('[ADMIN] Grant rod access error:', error);
+              return res.status(500).json({ error: error.message || 'Failed to grant rod access' });
+            }
+          }
+
+          return res.json({ success: true, rod: null });
         }
       }
     }
