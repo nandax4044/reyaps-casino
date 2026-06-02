@@ -319,16 +319,5 @@ BEGIN
   RAISE NOTICE '';
 END $$;
 
--- ============================================================================
--- SHOW TABLE STRUCTURES
--- ============================================================================
-\echo ''
-\echo '📋 TABLE: fishing_inventory (Main inventory table)'
-SELECT 
-  column_name,
-  data_type,
-  column_default,
-  is_nullable
-FROM information_schema.columns
-WHERE table_name = 'fishing_inventory'
-ORDER BY ordinal_position;
+-- Script complete! Check output above for verification.
+
