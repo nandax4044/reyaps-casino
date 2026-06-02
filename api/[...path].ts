@@ -462,12 +462,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (isSupabaseConfigured && supabaseAdmin) {
           const { data } = await supabaseAdmin
             .from('fishing_access')
-            .select('*, users(username, email)')
+            .select(`
+              *,
+              users!fishing_access_user_id_fkey(username, email)
+            `)
             .order('created_at', { ascending: false });
 
-          return res.json({ access_list: data || [] });
+          // Format response properly - frontend expects "access" not "access_list"
+          const accessList = (data || []).map((item: any) => ({
+            id: item.id,
+            user_id: item.user_id,
+            username: item.users?.username || 'Unknown',
+            email: item.users?.email || 'Unknown',
+            granted_by: item.granted_by,
+            expires_at: item.expires_at,
+            is_active: item.is_active,
+            created_at: item.created_at
+          }));
+
+          return res.json({ access: accessList });
         }
-        return res.json({ access_list: [] });
+        return res.json({ access: [] });
       }
 
       // Grant fishing access
@@ -479,23 +494,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (isSupabaseConfigured && supabaseAdmin) {
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + duration_days);
+          try {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + duration_days);
 
-          const { data: access } = await supabaseAdmin
-            .from('fishing_access')
-            .upsert({
-              user_id: user_id,
-              granted_by: user.id,
-              expires_at: expiresAt.toISOString(),
-              is_active: true
-            }, {
-              onConflict: 'user_id'
-            })
-            .select('*')
-            .single();
+            // Check if user exists
+            const { data: userExists, error: userError } = await supabaseAdmin
+              .from('users')
+              .select('id, username, email')
+              .eq('id', user_id)
+              .single();
 
-          return res.json({ success: true, access });
+            if (userError || !userExists) {
+              return res.status(400).json({ error: 'User tidak ditemukan!' });
+            }
+
+            // Upsert fishing access
+            const { data: access, error } = await supabaseAdmin
+              .from('fishing_access')
+              .upsert({
+                user_id: user_id,
+                granted_by: user.id,
+                expires_at: expiresAt.toISOString(),
+                is_active: true
+              }, {
+                onConflict: 'user_id'
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('[GRANT ACCESS] Error:', error);
+              return res.status(500).json({ error: 'Gagal memberikan akses: ' + error.message });
+            }
+
+            // Return with user info
+            return res.json({ 
+              success: true, 
+              access: {
+                ...access,
+                username: userExists.username,
+                email: userExists.email
+              }
+            });
+          } catch (e: any) {
+            console.error('[GRANT ACCESS] Exception:', e);
+            return res.status(500).json({ error: 'Server error: ' + e.message });
+          }
         }
         return res.json({ success: true });
       }
