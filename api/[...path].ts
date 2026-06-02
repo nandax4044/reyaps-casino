@@ -40,13 +40,32 @@ const localDb = {
 
 // Authenticate token and return user
 async function authenticateToken(token: string): Promise<any | null> {
+  console.log('[AUTH] Authenticating token (length: ' + (token?.length || 0) + ')');
+  
+  if (!token || token.length === 0) {
+    console.log('[AUTH] Token is empty');
+    return null;
+  }
+
   if (isSupabaseConfigured && supabase) {
     try {
+      console.log('[AUTH] Calling supabase.auth.getUser()...');
       const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      if (authError || !authData?.user) {
-        console.log('[AUTH] getUser failed:', authError?.message);
+      
+      if (authError) {
+        console.error('[AUTH] getUser error:', {
+          code: authError.status,
+          message: authError.message
+        });
         return null;
       }
+
+      if (!authData?.user) {
+        console.log('[AUTH] No user in authData');
+        return null;
+      }
+
+      console.log('[AUTH] Auth data received, user ID:', authData.user.id);
 
       const { data: user, error: userError } = await supabase
         .from('users')
@@ -55,7 +74,7 @@ async function authenticateToken(token: string): Promise<any | null> {
         .single();
 
       if (userError) {
-        console.log('[AUTH] User query failed:', userError.message);
+        console.error('[AUTH] Database query error:', userError.message);
         return null;
       }
       
@@ -64,13 +83,25 @@ async function authenticateToken(token: string): Promise<any | null> {
         return null;
       }
       
+      console.log('[AUTH] ✅ User found:', user.id, user.username);
       return user;
     } catch (e: any) {
-      console.error('[AUTH] Unexpected error:', e.message);
+      console.error('[AUTH] Unexpected error:', {
+        message: e?.message,
+        name: e?.name,
+        stack: e?.stack?.split('\n')[0]
+      });
       return null;
     }
   } else {
-    return localDb.users.find(u => u.id === token) || null;
+    console.log('[AUTH] Supabase not configured, using local auth');
+    const localUser = localDb.users.find(u => u.id === token);
+    if (localUser) {
+      console.log('[AUTH] ✅ Local user found:', localUser.id);
+    } else {
+      console.log('[AUTH] Local user not found');
+    }
+    return localUser || null;
   }
 }
 
@@ -94,6 +125,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log(`[API] ${method} ${path}`);
 
   try {
+    // ==================== DEBUG ENDPOINT ====================
+    if (path === '/debug/info' && method === 'GET') {
+      return res.json({
+        timestamp: new Date().toISOString(),
+        supabaseConfigured: isSupabaseConfigured,
+        supabaseUrl: supabaseUrl ? 'configured' : 'missing',
+        supabaseKey: supabaseKey ? 'configured' : 'missing',
+        nodeEnv: process.env.NODE_ENV
+      });
+    }
+
     // ==================== AUTH ROUTES (PUBLIC) ====================
     
     if (path === '/auth/register' && method === 'POST') {
@@ -331,35 +373,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
+      console.log('[AUTH] Missing or invalid auth header');
       return res.status(401).json({ error: 'Sesi tidak valid atau telah berakhir. Silakan login kembali.' });
     }
 
     const token = authHeader.split(' ')[1];
-    const user = await authenticateToken(token);
+    if (!token || token.length === 0) {
+      console.log('[AUTH] Empty token');
+      return res.status(401).json({ error: 'Token tidak valid.' });
+    }
+
+    console.log('[AUTH] Authenticating token...');
+    let user: any = null;
+    
+    try {
+      user = await authenticateToken(token);
+    } catch (authErr: any) {
+      console.error('[AUTH] Authentication error:', authErr?.message);
+      return res.status(500).json({ error: 'Authentication service error', details: authErr?.message });
+    }
     
     if (!user) {
+      console.log('[AUTH] User authentication failed - token invalid or user not found');
       return res.status(401).json({ error: 'Token tidak valid atau sudah kadaluarsa. Silakan login ulang.' });
     }
+
+    console.log('[AUTH] ✅ User authenticated:', user.id);
 
     // User profile
     if (path === '/user/profile' && method === 'GET') {
       try {
-        if (!user) {
-          return res.status(401).json({ error: 'User not authenticated' });
+        console.log('[PROFILE] Getting profile for user:', user?.id);
+        
+        if (!user || typeof user !== 'object') {
+          console.error('[PROFILE] Invalid user object:', typeof user);
+          return res.status(500).json({ error: 'Invalid user object' });
         }
-
-        // Safely extract password
-        const userObj = user as any;
-        const { password: _, ...safeUser } = userObj;
+        
+        // Create a copy to avoid modifying the original
+        const profileData = { ...user };
+        
+        // Remove sensitive fields
+        delete profileData.password;
+        delete profileData.password_hash;
+        
+        console.log('[PROFILE] ✅ Sending profile:', Object.keys(profileData));
         
         return res.json({ 
-          user: safeUser || {}, 
-          database: isSupabaseConfigured ? 'supabase' : 'mock_memory' 
+          user: profileData, 
+          database: isSupabaseConfigured ? 'supabase' : 'mock_memory',
+          success: true
         });
       } catch (profileError: any) {
-        console.error('[PROFILE ERROR]', profileError);
+        console.error('[PROFILE] Exception:', profileError?.message);
         return res.status(500).json({ 
-          error: 'Failed to get profile', 
+          error: 'Failed to get profile',
           details: profileError?.message || 'Unknown error'
         });
       }
