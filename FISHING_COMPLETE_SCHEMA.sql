@@ -6,6 +6,20 @@
 -- ============================================================================
 
 -- ============================================================================
+-- CLEANUP: Drop old functions first (to avoid conflicts)
+-- ============================================================================
+DROP FUNCTION IF EXISTS consume_bait(UUID) CASCADE;
+DROP FUNCTION IF EXISTS add_fishing_saldo(UUID, INTEGER) CASCADE;
+DROP FUNCTION IF EXISTS increment_fish_caught(UUID) CASCADE;
+DROP FUNCTION IF EXISTS convert_fishing_to_main_balance(UUID, INTEGER) CASCADE;
+DROP FUNCTION IF EXISTS create_fishing_inventory_on_access() CASCADE;
+DROP FUNCTION IF EXISTS increment_fishing_saldo(UUID, DECIMAL) CASCADE;
+DROP FUNCTION IF EXISTS increment_fishing_saldo(UUID, INTEGER) CASCADE;
+DROP FUNCTION IF EXISTS update_equipped_rod(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS grant_bait(UUID, INTEGER, UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS deduct_bait(UUID, INTEGER) CASCADE;
+
+-- ============================================================================
 -- CLEANUP: Drop old tables if exist (fresh start)
 -- ============================================================================
 DROP TABLE IF EXISTS afk_fishing_sessions CASCADE;
