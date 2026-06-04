@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import CaseOpeningGame from './components/CaseOpeningGame';
 import { FishingGameV3 } from './components/FishingGameV3';
 import { AuthScreen } from './components/AuthScreen';
 import { UserDashboard } from './components/UserDashboard';
@@ -96,29 +95,8 @@ export default function App() {
   };
 
   // --- Dynamic Tab Selector ---
-  const [activeGame, setActiveGame] = useState<'lobby' | 'cases' | 'fishing' | 'profile' | 'admin'>('lobby');
+  const [activeGame, setActiveGame] = useState<'lobby' | 'fishing' | 'profile' | 'admin'>('lobby');
   const [mobileSidebarTab, setMobileSidebarTab] = useState<'players' | 'chat'>('players');
-
-  // --- Games Published Status ---
-  const [casesPublished, setCasesPublished] = useState<boolean>(true);
-
-  const loadGamesPublishedStatus = async () => {
-    try {
-      // Load cases published status
-      const casesData = await API.getGameConfig('cases');
-      if (casesData.published !== undefined) {
-        setCasesPublished(casesData.published);
-      }
-    } catch (e) {
-      console.warn('Failed to load games published status', e);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      loadGamesPublishedStatus();
-    }
-  }, [user]);
 
   // --- Render Splash screen loader ---
   if (loadingUser) {
@@ -193,9 +171,6 @@ export default function App() {
           activeGame={activeGame}
           onNavigate={setActiveGame}
           onLogout={handleLogout}
-          gamesPublished={{
-            cases: casesPublished
-          }}
         />
 
       {/* MAIN LAYOUT BODY */}
@@ -216,9 +191,6 @@ export default function App() {
                 onOpenProfile={() => setActiveGame('profile')}
                 onOpenAdmin={() => setActiveGame('admin')}
                 onLogout={handleLogout}
-                gamesPublished={{
-                  cases: casesPublished
-                }}
               />
             </div>
 
@@ -260,19 +232,9 @@ export default function App() {
         )}
 
         {/* ========== GAME PAGES - NO SIDEBAR ========== */}
-        {(activeGame === 'cases' || activeGame === 'fishing') && (
-          <div className="w-full">
-            {activeGame === 'cases' && (
-              <div className="w-full animate-fade-in">
-                <CaseOpeningGame user={user} refreshUser={fetchUserProfile} />
-              </div>
-            )}
-
-            {activeGame === 'fishing' && (
-              <div className="w-full animate-fade-in">
-                <FishingGameV3 user={user} onBack={() => setActiveGame('lobby')} />
-              </div>
-            )}
+        {activeGame === 'fishing' && (
+          <div className="w-full animate-fade-in">
+            <FishingGameV3 user={user} onBack={() => setActiveGame('lobby')} />
           </div>
         )}
 

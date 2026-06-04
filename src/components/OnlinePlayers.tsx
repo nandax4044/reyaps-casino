@@ -87,10 +87,10 @@ export function OnlinePlayers({ currentUser }: OnlinePlayersProps) {
           if (reconciledPlayers.length === 0) {
             // Dynamic fallback simulation
             reconciledPlayers = [
-              { id: 'v1', username: 'GrowDev_Id', balance: 452300, is_staff: false, activity: 'Membuka Golden Chest' },
-              { id: 'v2', username: 'WLSeller99', balance: 1250000, is_staff: false, activity: 'Bertaruh di Crash Game' },
+              { id: 'v1', username: 'GrowDev_Id', balance: 452300, is_staff: false, activity: 'AFK Fishing' },
+              { id: 'v2', username: 'WLSeller99', balance: 1250000, is_staff: false, activity: 'AFK Fishing' },
               { id: 'v3', username: 'nanddev', balance: 5000000, is_staff: true, activity: 'Mengelola Jalannya Casino' },
-              { id: 'v4', username: 'ProBreakerGT', balance: 82500, is_staff: false, activity: 'Memutar Roda Hadiah' },
+              { id: 'v4', username: 'ProBreakerGT', balance: 82500, is_staff: false, activity: 'AFK Fishing' },
               { id: 'v5', username: 'BGL_Digger', balance: 7520000, is_staff: false, activity: 'Idle di Lobby' },
               { id: 'v6', username: 'VortexWL', balance: 35000, is_staff: false, activity: 'Deposit 200 WL ke staff' },
               { id: 'v7', username: 'LegendaryLox', balance: 24500000, is_staff: false, activity: 'Membuka Legendary Chest' }

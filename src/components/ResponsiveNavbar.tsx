@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User, ShieldCheck, LogOut, Home, Gamepad2, Settings, Fish } from 'lucide-react';
+import { Menu, X, User, ShieldCheck, LogOut, Home, Settings, Fish } from 'lucide-react';
 
 interface ResponsiveNavbarProps {
   user: any;
-  activeGame: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin';
-  onNavigate: (game: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin') => void;
+  activeGame: 'lobby' | 'fishing' | 'profile' | 'admin';
+  onNavigate: (game: 'lobby' | 'fishing' | 'profile' | 'admin') => void;
   onLogout: () => void;
-  gamesPublished?: {
-    cases?: boolean;
-  };
 }
 
-export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, gamesPublished }: ResponsiveNavbarProps) {
+export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout }: ResponsiveNavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [maintenanceNotif, setMaintenanceNotif] = useState<string | null>(null);
@@ -27,22 +24,13 @@ export function ResponsiveNavbar({ user, activeGame, onNavigate, onLogout, games
   }, []);
 
   // Close menu when navigating
-  const handleNavClick = (game: 'lobby' | 'cases' | 'fishing' | 'profile' | 'admin') => {
-    // Check if game is published
-    if (game === 'cases' && gamesPublished?.cases === false) {
-      setMaintenanceNotif('Case Opening sedang dalam perbaikan. Silakan coba lagi nanti.');
-      setTimeout(() => setMaintenanceNotif(null), 3000);
-      setIsMenuOpen(false);
-      return;
-    }
-
+  const handleNavClick = (game: 'lobby' | 'fishing' | 'profile' | 'admin') => {
     onNavigate(game);
     setIsMenuOpen(false);
   };
 
   const navLinks = [
     { id: 'lobby', label: 'Home', icon: Home },
-    { id: 'cases', label: 'Case Opening', icon: Gamepad2 },
     { id: 'fishing', label: 'AFK Fishing', icon: Fish },
     { id: 'profile', label: 'Dashboard', icon: User },
   ];

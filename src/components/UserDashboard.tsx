@@ -214,7 +214,7 @@ export function UserDashboard({ user, onLogout, onCloseDashboard }: UserDashboar
               <Package className="w-12 h-12 text-slate-600 mb-3 animate-pulse" />
               <h4 className="font-display font-bold text-sm text-slate-300">Inventory Kosong</h4>
               <p className="text-xs text-slate-500 font-sans mt-1 leading-relaxed">
-                Anda belum memenangkan item apapun. Silakan mainkan Game Roda, Bukakan Case, atau main Crash Game untuk memenangkan item!
+                Anda belum memenangkan item apapun. Silakan mainkan AFK Fishing untuk memenangkan item!
               </p>
             </div>
           ) : (

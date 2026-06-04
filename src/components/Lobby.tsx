@@ -1,30 +1,16 @@
 import React from 'react';
-import { Gift, TrendingUp, Crown, Zap, Gamepad2, Fish, Sparkles } from 'lucide-react';
+import { TrendingUp, Crown, Zap, Gamepad2, Fish, Sparkles } from 'lucide-react';
 
 interface LobbyProps {
   user: any;
-  onSelectGame: (game: 'cases' | 'fishing') => void;
+  onSelectGame: (game: 'fishing') => void;
   onOpenProfile: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
-  gamesPublished?: {
-    cases?: boolean;
-  };
 }
 
-export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout, gamesPublished }: LobbyProps) {
+export function Lobby({ user, onSelectGame, onOpenProfile, onOpenAdmin, onLogout }: LobbyProps) {
   const games = [
-    {
-      id: 'cases' as const,
-      name: 'Case Opening',
-      description: 'Open chests and get rare items with fair RNG system',
-      icon: Gift,
-      color: 'from-[#38BDF8] to-[#1D4ED8]',
-      bgGlow: 'from-[#38BDF8]/20 to-[#1D4ED8]/20',
-      image: '/images/intichest2.png',
-      stats: '15 Chests • 75 Items',
-      published: gamesPublished?.cases !== false
-    },
     {
       id: 'fishing' as const,
       name: 'AFK Fishing',

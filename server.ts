@@ -5,8 +5,6 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 
-import caseOpeningDefault from './src/data/case_opening.json' with { type: 'json' };
-import permainanDefault from './src/data/permainan.json' with { type: 'json' };
 
 const app = express();
 const PORT = 3000;
@@ -82,10 +80,7 @@ const localDb = {
     }
   ],
   inventory: [] as any[],
-  configs: {
-    cases: JSON.parse(JSON.stringify(caseOpeningDefault)),
-    crash:  JSON.parse(JSON.stringify(permainanDefault))
-  } as Record<string, any>
+  configs: {} as Record<string, any>
 };
 
 // ─── Health Check ──────────────────────────────────────────────────────────────

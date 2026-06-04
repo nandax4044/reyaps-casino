@@ -4,8 +4,6 @@ import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { createClient } from '@supabase/supabase-js';
 
-import caseOpeningDefault from './src/data/case_opening.json' assert { type: 'json' };
-import permainanDefault from './src/data/permainan.json' assert { type: 'json' };
 
 const app = express();
 const PORT = 3000;
